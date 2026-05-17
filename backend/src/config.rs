@@ -3,10 +3,21 @@ use std::str::FromStr;
 
 use anyhow::{Context, Result, bail};
 
-/// Where built dict bundles live (relative to CWD when developing, an
-/// absolute path in prod). Configurable via `NUKU_DATA_DIR`.
+/// Where built dict bundles live. Configurable via `NUKU_DATA_DIR`;
+/// otherwise probes a couple of sensible defaults so the same binary
+/// works whether you launch it from the repo root or from `backend/`.
 pub fn data_dir() -> PathBuf {
-    PathBuf::from(std::env::var("NUKU_DATA_DIR").unwrap_or_else(|_| "backend/data".into()))
+    if let Ok(p) = std::env::var("NUKU_DATA_DIR") {
+        return PathBuf::from(p);
+    }
+    for candidate in ["backend/data", "data", "../backend/data"] {
+        let p = PathBuf::from(candidate);
+        if p.exists() {
+            return p;
+        }
+    }
+    // Fallback that matches the repo-root default when nothing yet exists.
+    PathBuf::from("backend/data")
 }
 
 /// All runtime configuration is materialised once on startup.
