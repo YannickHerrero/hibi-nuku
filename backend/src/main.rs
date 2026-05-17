@@ -3,6 +3,7 @@ mod config;
 mod db;
 mod error;
 mod logging;
+mod media;
 
 use std::sync::Arc;
 
