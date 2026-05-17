@@ -5,7 +5,8 @@ import { api } from "@/api/client";
 import { getToken } from "@/lib/token";
 import { SubtitleOverlay } from "@/player/SubtitleOverlay";
 import { Controls } from "@/player/Controls";
-import { Popup } from "@/popup/Popup";
+import { Popup, type ResolvedEntry } from "@/popup/Popup";
+import { MiningModal } from "@/mining/MiningModal";
 import type { SubtitleLine, Token } from "@/api/types";
 
 export const Route = createFileRoute("/watch/$videoId")({
@@ -39,6 +40,10 @@ function WatchPage() {
   const [videoEl, setVideoEl] = useState<HTMLVideoElement | null>(null);
   const [currentMs, setCurrentMs] = useState(0);
   const [popupToken, setPopupToken] = useState<{ token: Token; rect: DOMRect } | null>(null);
+  const [mining, setMining] = useState<{
+    line: SubtitleLine;
+    resolved: ResolvedEntry;
+  } | null>(null);
   const [resumedFromProgress, setResumedFromProgress] = useState(false);
 
   // The <video> element can't set custom headers, so we attach the
@@ -142,6 +147,24 @@ function WatchPage() {
           anchor={popupToken.rect}
           videoTitle={video.title}
           onClose={() => setPopupToken(null)}
+          onMine={(resolved) => {
+            if (!activeLine) return;
+            setMining({ line: activeLine, resolved });
+            setPopupToken(null);
+            videoEl?.pause();
+          }}
+        />
+      )}
+      {mining && (
+        <MiningModal
+          videoId={id}
+          line={mining.line}
+          focusWord={mining.resolved.lemma}
+          focusWordReading={mining.resolved.reading}
+          defaultEnglish={mining.line.translation ?? ""}
+          defaultGrammarNote={mining.line.grammarNote ?? ""}
+          defaultTags={[video.sourceTag]}
+          onClose={() => setMining(null)}
         />
       )}
     </div>
