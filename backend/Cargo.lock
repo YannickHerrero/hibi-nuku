@@ -980,6 +980,7 @@ dependencies = [
  "hex",
  "http",
  "lindera",
+ "percent-encoding",
  "quick-xml",
  "reqwest",
  "serde",

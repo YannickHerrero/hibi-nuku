@@ -55,6 +55,7 @@ hex = "0.4.3"
 reqwest = { version = "0.13.2", default-features = false, features = ["json", "rustls", "multipart", "stream"] }
 futures = "0.3"
 tokio-util = { version = "0.7", features = ["io"] }
+percent-encoding = "2"
 
 [profile.release]
 lto = "thin"

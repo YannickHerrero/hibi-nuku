@@ -17,18 +17,35 @@ pub async fn require_bearer(
     req: Request,
     next: Next,
 ) -> Result<Response, AppError> {
-    let header = req
+    let header_tok = req
         .headers()
         .get(header::AUTHORIZATION)
         .and_then(|v| v.to_str().ok())
-        .ok_or(AppError::Unauthorised)?;
+        .and_then(|v| v.strip_prefix("Bearer "))
+        .map(|s| s.to_owned());
 
-    let token = header
-        .strip_prefix("Bearer ")
-        .ok_or(AppError::Unauthorised)?;
+    let query_tok = req
+        .uri()
+        .query()
+        .and_then(|q| {
+            q.split('&').find_map(|kv| {
+                let (k, v) = kv.split_once('=')?;
+                if k == "token" {
+                    Some(
+                        percent_encoding::percent_decode_str(v)
+                            .decode_utf8_lossy()
+                            .into_owned(),
+                    )
+                } else {
+                    None
+                }
+            })
+        });
+
+    let presented = header_tok.or(query_tok).ok_or(AppError::Unauthorised)?;
 
     let expected = state.config.token.as_bytes();
-    if expected.ct_eq(token.as_bytes()).into() {
+    if expected.ct_eq(presented.as_bytes()).into() {
         Ok(next.run(req).await)
     } else {
         Err(AppError::Unauthorised)
