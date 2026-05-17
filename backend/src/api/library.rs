@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use axum::Json;
 use axum::Router;
@@ -8,6 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{AppError, AppResult};
 use crate::library::model::{Video, VideoStatus};
+use crate::library::pipeline;
 use crate::library::repo;
 use crate::library::tracks;
 use crate::media;
@@ -108,15 +110,12 @@ async fn import(
             _ => AppError::Other(e),
         })?;
 
-    // Phase 3+: actual pipeline kicks off here. For now mark the
-    // video ready-with-no-content so the row is consumable.
-    repo::set_status(&state.db, id, VideoStatus::Ready, None)
-        .await
-        .map_err(AppError::Other)?;
+    let pool = Arc::new(state.db.clone());
+    tokio::spawn(pipeline::run(pool, id));
 
     Ok(Json(ImportResp {
         video_id: id,
-        status: VideoStatus::Ready,
+        status: VideoStatus::Probing,
     }))
 }
 
@@ -202,10 +201,11 @@ async fn reprocess(
         .await
         .map_err(AppError::Other)?
         .ok_or(AppError::NotFound)?;
-    // Phase 3+: re-run the pipeline. For now this just resets status.
     repo::set_status(&state.db, video.id, VideoStatus::Probing, None)
         .await
         .map_err(AppError::Other)?;
+    let pool = Arc::new(state.db.clone());
+    tokio::spawn(pipeline::run(pool, video.id));
     Ok(Json(ReprocessResp {
         video_id: video.id,
         status: VideoStatus::Probing,
