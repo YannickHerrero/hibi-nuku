@@ -1,9 +1,10 @@
-# Hibi Nuku — Project Specification
+# Hibi Nuku — Project Specification (archival)
 
 > Sentence mining web app for Japanese learners. Imports video files (anime/JP content), pre-processes subtitles with tokenization + LLM translation, then offers a Yomitan-style popup dictionary and one-click card creation into the Hibi SRS ecosystem.
 >
-> **Status**: Greenfield. This document is the source of truth for v1.
-> **Audience**: Solo developer (the author) + Claude Code for implementation.
+> **Status**: This is the **original design doc** — kept for context (why we picked which library, what we deliberately left out, the multi-device intent). The code is the source of truth now; where the build diverged from this doc, see §21 "Changes since first draft" at the bottom of this file. The README has the current high-level overview, and `docs/deploy.md` has the current ops story.
+>
+> **Audience**: original-author notes + AI implementer context. If you're reading this for the first time, start at the README.
 
 ---
 
@@ -913,3 +914,73 @@ When asked to plan and build this project:
 6. Ask before introducing major new dependencies not listed in §5.
 7. If something is genuinely ambiguous, list it as a question and propose a default — don't block.
 8. Prefer simplicity. This is a personal tool, not a SaaS product.
+
+---
+
+## 21. Changes since first draft
+
+The build diverged from this spec in a handful of places. Listed here so anyone using this doc as background can spot reality vs original intent. The README + the code are authoritative.
+
+### Library import (§8, §18)
+
+- **§18 said browser upload was out of scope.** Reverted: it's the primary import path now. Server-path import was removed entirely.
+- New endpoints: `POST /api/library/upload-media` (multipart, streamed to `$NUKU_LIBRARY_DIR/uploads/<ts>-<name>`), `POST /api/library/upload-subtitle` (sidecar .srt/.ass/.vtt), `POST /api/library/create` (creates the row + kicks the pipeline).
+- The import modal probes the file after upload and shows audio + subtitle track pickers (with language + title hints, PGS marked unsupported). Picking "Upload a sidecar file" reveals a second uploader.
+- Upload UI shows MB/s + ETA via XHR `progress` events.
+
+### Schema additions (§7)
+
+- `videos.thumbnail_path` (migration 0004).
+- `videos.subtitle_sidecar_path` (migration 0005). When set, pipeline parses the file directly instead of running ffmpeg `-map` on the container.
+- `wk_meta` key/value table (in migration 0002) for cached username + WK user level.
+
+### Streaming (§4, §8, §10)
+
+- Spec said "remux into fragmented MP4 served via range requests". The build does fragmented MP4 piped from ffmpeg stdout, **without** byte-range support. The frontend re-issues the stream URL with `?from=<seconds>` when the user seeks (a one-RTT reload). For personal use this is fine; full byte-range scrubbing is deferred.
+- Auth: protected routes also accept `?token=<NUKU_TOKEN>` query so `<video src>` / `<img src>` work (they can't carry an `Authorization` header).
+
+### Player UX (§13.3)
+
+- Subtitle line renders in a **strip below the video**, not overlayed on it. Min-height 108px so the transport row doesn't jump between cues.
+- Video container capped at `calc(100vh - 175px)` and centered.
+- **English translation appears below the JP line, blurred until hovered/tapped** (self-test friendly).
+- **Popup opens on click/tap only** — hover was removed (it flickered as the eye scanned tokens).
+- **Underlines, not colours** for word status — only `new` (solid faint) and `learning` (thicker yellow) get underlined; `known` is plain ink, `ignored` is muted no-decoration.
+- **Playback rate slider removed** (always 1×).
+- **Keyboard map (current):** `Space` play/pause · `←` / `→` (or `A`/`D`) prev/next subtitle line · `R` (or `Z`) replay current line · `S` pause + close popup. `S` doesn't yet open the mining modal (planned).
+- The watch route is full-bleed: the global header + page title are hidden when path starts with `/watch/`.
+
+### Endpoints not in §8 but added
+
+- `PATCH /api/videos/{id}` — edit title / source_tag.
+- `GET /api/videos/{id}/thumbnail` — webp from disk.
+- `GET / POST /api/videos/{id}/progress` — multi-device resume.
+- `GET /api/settings` — non-secret config snapshot.
+- `GET /api/debug/hibi-status` — per-endpoint Hibi pinger.
+- `GET /api/debug/db-stats` — row counts + DB file size.
+- `DELETE /api/debug/llm-cache` — wipe cache by model or wholesale.
+
+### Frontend additions
+
+- **Five-theme design system** (`paper`, `stone`, `sage`, `clay`, `ink`) toggled via `html[data-theme]`. Tokens adapted from the Hibi monorepo's Torakaa-based DS.
+- **`/debug` page**: Hibi connectivity pinger, IndexedDB inspector + wipe, local JMDict probe, LLM cache controls, server settings dump, SW status.
+
+### Operational
+
+- **systemd + Makefile** for deploy. `make install` does the first-time setup; `make update` is the post-`git pull` one-liner. `docs/deploy.md` + `docs/nuku.service` carry the runbook. The spec hand-waved env loading; now `dotenvy` reads `.env` in dev, `/etc/nuku.env` is the prod source.
+- **`NUKU_DATA_DIR` env** now governs where dict bundles + SQLite live. All `[[bin]]` CLIs honour it. The original `backend/data` relative-path defaults caused a split-directory bug we hit early on; resolved by absolute paths + candidate probing.
+
+### LLM robustness (§9.2)
+
+- Strip ```` ```json … ``` ```` fences from model output before parsing (Claude sometimes wraps JSON in markdown even with JSON mode requested).
+- Cache key includes a `PROMPT_VERSION` constant — bumping it invalidates the cache.
+
+### Hibi proxy (§9.1)
+
+- `/api/known-words` degrades gracefully on upstream 5xx: server returns an empty list + a single WARN log (Hibi had a real bug here on `last_review` column; we fixed that upstream too).
+- Hibi client errors include METHOD + path so logs aren't opaque.
+
+### Out of scope confirmed (still deferred)
+
+- Pitch accent dict, PGS OCR, AnkiConnect, multi-track sub toggle, in-app review, byte-range scrubbing, multiple frequency lists, Vision Pro theater mode.
+- Manifest icons (PWA installs work but with default icons).

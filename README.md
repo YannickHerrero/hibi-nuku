@@ -8,7 +8,7 @@ Upload a video → server probes it, extracts the Japanese subtitle track (or ac
 **License**: private. Not licensed for redistribution.
 **Audience**: one person. Not designed for multi-tenancy or public exposure.
 
-Full spec (source of truth for design decisions): [`hibi-nuku-spec.md`](./hibi-nuku-spec.md).
+Original design doc (kept for context — see §21 for everything that's diverged): [`docs/spec.md`](./docs/spec.md).
 Deploy guide (systemd, one-command install/update): [`docs/deploy.md`](./docs/deploy.md).
 
 ---
