@@ -1,6 +1,7 @@
 #![allow(unused_imports)]
 
 pub mod ffprobe;
+pub mod remux;
 pub mod stream;
 pub mod thumb;
 

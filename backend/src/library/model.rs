@@ -12,6 +12,7 @@ pub enum VideoStatus {
     Parsing,
     Tokenizing,
     Translating,
+    Remuxing,
     Ready,
     Error,
 }
@@ -24,6 +25,7 @@ impl VideoStatus {
             VideoStatus::Parsing => "parsing",
             VideoStatus::Tokenizing => "tokenizing",
             VideoStatus::Translating => "translating",
+            VideoStatus::Remuxing => "remuxing",
             VideoStatus::Ready => "ready",
             VideoStatus::Error => "error",
         }
@@ -36,6 +38,7 @@ impl VideoStatus {
             "parsing" => VideoStatus::Parsing,
             "tokenizing" => VideoStatus::Tokenizing,
             "translating" => VideoStatus::Translating,
+            "remuxing" => VideoStatus::Remuxing,
             "ready" => VideoStatus::Ready,
             "error" => VideoStatus::Error,
             _ => return None,

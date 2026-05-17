@@ -21,7 +21,7 @@ use crate::library::repo;
 use crate::library::tracks;
 use crate::llm::client::OpenRouter;
 use crate::llm::translate;
-use crate::media::thumb;
+use crate::media::{remux, thumb};
 use crate::subtitle;
 use crate::tokenize::jmdict_index::JmdictIndex;
 use crate::tokenize::{lindera_wrap, segment};
@@ -164,6 +164,39 @@ async fn drive(
         .context("translate lines")?;
     info!(video_id, n_translated = n, "translation complete");
 
+    // 5. remuxing — one-shot ffmpeg pass into a faststart MP4 sibling.
+    // Lets the stream endpoint serve a real file with native HTTP
+    // Range support, so scrubbing + subtitle nav are buffer-free.
+    // Best-effort: failure logs a warning and leaves the row Ready,
+    // falling back to the on-the-fly ffmpeg pipe at request time.
+    repo::set_status(&pool, video_id, VideoStatus::Remuxing, None).await?;
+    let audio_codec = probe_audio_codec(path, video.jp_audio_idx).await;
+    match remux::remux(path, video.jp_audio_idx, &audio_codec).await {
+        Ok(out) => {
+            repo::set_remuxed_path(&pool, video_id, &out.to_string_lossy()).await?;
+            info!(video_id, path = %out.display(), "remux complete");
+        }
+        Err(e) => {
+            tracing::warn!(video_id, error = %format!("{e:#}"), "remux failed; falling back to live pipe");
+        }
+    }
+
     repo::set_status(&pool, video_id, VideoStatus::Ready, None).await?;
     Ok(())
+}
+
+async fn probe_audio_codec(path: &Path, audio_idx: Option<i64>) -> String {
+    let probe = match crate::media::probe(path).await {
+        Ok(p) => p,
+        Err(_) => return String::new(),
+    };
+    probe
+        .streams
+        .iter()
+        .find(|s| match audio_idx {
+            Some(idx) => s.index as i64 == idx,
+            None => matches!(s.codec_type, crate::media::StreamKind::Audio),
+        })
+        .map(|s| s.codec_name.clone())
+        .unwrap_or_default()
 }

@@ -135,6 +135,32 @@ pub async fn set_status(
     Ok(())
 }
 
+pub async fn set_remuxed_path(
+    pool: &SqlitePool,
+    id: i64,
+    path: &str,
+) -> Result<()> {
+    let now = Utc::now().to_rfc3339();
+    sqlx::query("UPDATE videos SET remuxed_path = ?, updated_at = ? WHERE id = ?")
+        .bind(path)
+        .bind(&now)
+        .bind(id)
+        .execute(pool)
+        .await
+        .context("set remuxed_path")?;
+    Ok(())
+}
+
+pub async fn get_remuxed_path(pool: &SqlitePool, id: i64) -> Result<Option<String>> {
+    use sqlx::Row;
+    let row = sqlx::query("SELECT remuxed_path FROM videos WHERE id = ?")
+        .bind(id)
+        .fetch_optional(pool)
+        .await
+        .context("get remuxed_path")?;
+    Ok(row.and_then(|r| r.try_get::<Option<String>, _>("remuxed_path").ok().flatten()))
+}
+
 pub async fn set_subtitle_sidecar(
     pool: &SqlitePool,
     id: i64,
