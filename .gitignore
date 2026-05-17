@@ -12,6 +12,9 @@ node_modules/
 frontend/dist/
 frontend/.vite/
 
+# TanStack Router generated tree
+frontend/src/routeTree.gen.ts
+
 # SQLite
 *.db
 *.db-journal
