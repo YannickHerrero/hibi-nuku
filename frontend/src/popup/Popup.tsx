@@ -60,6 +60,7 @@ export function Popup({ token, anchor, toneTags, onClose, onMine }: Props) {
     queryKey: ["known"],
     queryFn: api.knownWords,
     refetchInterval: 60_000,
+    retry: false,
   });
   const knownStatus = useMemo(() => {
     if (!known) return undefined;

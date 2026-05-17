@@ -28,6 +28,7 @@ function WatchPage() {
     queryKey: ["known"],
     queryFn: api.knownWords,
     refetchInterval: 60_000,
+    retry: false,
   });
   const { data: progress } = useQuery({
     queryKey: ["progress", id],

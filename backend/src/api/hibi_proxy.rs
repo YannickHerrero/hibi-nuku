@@ -53,13 +53,23 @@ async fn known_words(State(state): State<AppState>) -> AppResult<Json<KnownWords
         }
     }
     let hibi = Hibi::new(state.config.hibi_base.clone(), state.config.hibi_api_key.clone());
-    let resp = hibi.known_words().await.map_err(AppError::Other)?;
-    let mut guard = state.known_cache.inner.lock().await;
-    *guard = Some(CachedKnown {
-        fetched_at: Instant::now(),
-        items: resp.items.clone(),
-    });
-    Ok(Json(resp))
+    match hibi.known_words().await {
+        Ok(resp) => {
+            let mut guard = state.known_cache.inner.lock().await;
+            *guard = Some(CachedKnown {
+                fetched_at: Instant::now(),
+                items: resp.items.clone(),
+            });
+            Ok(Json(resp))
+        }
+        Err(e) => {
+            // Hibi periodically 500s on this endpoint; downgrade the
+            // log level so we don't flood the journal. The frontend
+            // treats an empty list as a soft failure (no underlines).
+            tracing::warn!(error = %format!("{e:#}"), "known-words upstream failure; returning empty");
+            Ok(Json(KnownWordsResp { items: Vec::new() }))
+        }
+    }
 }
 
 async fn word_status(
