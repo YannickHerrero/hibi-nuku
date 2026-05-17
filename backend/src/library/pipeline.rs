@@ -20,6 +20,7 @@ use crate::library::repo;
 use crate::library::tracks;
 use crate::llm::client::OpenRouter;
 use crate::llm::translate;
+use crate::media::thumb;
 use crate::subtitle;
 use crate::tokenize::jmdict_index::JmdictIndex;
 use crate::tokenize::{lindera_wrap, segment};
@@ -67,6 +68,22 @@ async fn drive(
     // 1. extracting + 2. parsing
     repo::set_status(&pool, video_id, VideoStatus::Extracting, None).await?;
     let path = Path::new(&video.path);
+
+    // Best-effort thumbnail at 30% of the duration; failure is non-fatal.
+    let thumb_dir = config.data_dir.join("thumbs");
+    if let Err(e) = tokio::fs::create_dir_all(&thumb_dir).await {
+        tracing::warn!(error = %e, "thumb dir create");
+    }
+    let thumb_path = thumb_dir.join(format!("{video_id}.webp"));
+    let at_sec = (video.duration_ms as f64 / 1000.0) * 0.30;
+    if let Err(e) = thumb::extract(path, at_sec, &thumb_path).await {
+        tracing::warn!(error = %e, "thumbnail extract failed; continuing");
+    } else if let Err(e) =
+        repo::set_thumbnail_path(&pool, video_id, &thumb_path.to_string_lossy()).await
+    {
+        tracing::warn!(error = %e, "thumbnail path persist failed");
+    }
+
     let parsed = subtitle::extract::extract_and_parse(path, sub_idx as usize, format)
         .await
         .context("subtitle extraction")?;

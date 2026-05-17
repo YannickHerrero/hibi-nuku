@@ -135,6 +135,22 @@ pub async fn set_status(
     Ok(())
 }
 
+pub async fn set_thumbnail_path(
+    pool: &SqlitePool,
+    id: i64,
+    thumbnail_path: &str,
+) -> Result<()> {
+    let now = Utc::now().to_rfc3339();
+    sqlx::query("UPDATE videos SET thumbnail_path = ?, updated_at = ? WHERE id = ?")
+        .bind(thumbnail_path)
+        .bind(&now)
+        .bind(id)
+        .execute(pool)
+        .await
+        .context("set thumbnail_path")?;
+    Ok(())
+}
+
 pub async fn set_tracks(
     pool: &SqlitePool,
     id: i64,

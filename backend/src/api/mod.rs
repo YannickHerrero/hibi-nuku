@@ -1,6 +1,7 @@
 pub mod auth;
 pub mod health;
 pub mod library;
+pub mod videos;
 
 use std::sync::Arc;
 
@@ -22,9 +23,13 @@ pub struct AppState {
 pub fn router(state: AppState) -> Router {
     let public = Router::new().merge(health::routes());
 
-    let protected = Router::new().merge(library::routes()).route_layer(
-        middleware::from_fn_with_state(state.clone(), auth::require_bearer),
-    );
+    let protected = Router::new()
+        .merge(library::routes())
+        .merge(videos::routes())
+        .route_layer(middleware::from_fn_with_state(
+            state.clone(),
+            auth::require_bearer,
+        ));
 
     Router::new()
         .nest("/api", public.merge(protected))
