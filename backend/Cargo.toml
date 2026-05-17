@@ -1,0 +1,17 @@
+[package]
+name = "hibi-nuku"
+version = "0.1.0"
+edition = "2024"
+description = "Hibi Nuku — Japanese sentence mining server"
+publish = false
+
+[[bin]]
+name = "nuku"
+path = "src/main.rs"
+
+[dependencies]
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "debuginfo"
