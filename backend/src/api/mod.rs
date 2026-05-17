@@ -49,14 +49,35 @@ pub fn router(state: AppState) -> Router {
         .nest("/api", public.merge(protected))
         .with_state(state.clone());
 
-    // Production: serve the built frontend from frontend/dist. In dev
-    // Vite proxies /api → backend, so the static fallback never runs.
-    let dist = std::path::PathBuf::from("frontend/dist");
-    if dist.exists() {
+    // Production: serve the built frontend from frontend/dist.
+    //
+    // CWD when running via `cargo run` is the crate dir (`backend/`),
+    // so we check a few candidate locations + honour an explicit
+    // `NUKU_FRONTEND_DIST` env override.
+    if let Some(dist) = find_frontend_dist() {
         let index = dist.join("index.html");
+        tracing::info!(path = %dist.display(), "serving frontend dist");
         let serve_dir = ServeDir::new(&dist).fallback(ServeFile::new(&index));
         app = app.fallback_service(serve_dir);
+    } else {
+        tracing::warn!("frontend dist not found — running API-only");
     }
 
     app.layer(TraceLayer::new_for_http())
+}
+
+fn find_frontend_dist() -> Option<std::path::PathBuf> {
+    if let Ok(p) = std::env::var("NUKU_FRONTEND_DIST") {
+        let p = std::path::PathBuf::from(p);
+        if p.join("index.html").exists() {
+            return Some(p);
+        }
+    }
+    for candidate in ["frontend/dist", "../frontend/dist", "./dist"] {
+        let p = std::path::PathBuf::from(candidate);
+        if p.join("index.html").exists() {
+            return Some(p);
+        }
+    }
+    None
 }
