@@ -1,5 +1,7 @@
 import { http } from "./http";
 import type {
+  CreateReq,
+  CreateResp,
   Manifest,
   MineRequest,
   MineResponse,
@@ -16,8 +18,8 @@ export const api = {
   // Library
   library: () => http.get<Video[]>("/api/library"),
   video: (id: number) => http.get<Video>(`/api/videos/${id}`),
-  importVideo: (body: { path: string; title?: string; source_tag?: string }) =>
-    http.post<{ videoId: number; status: string }>("/api/library/import", body),
+  createFromUpload: (body: CreateReq) =>
+    http.post<CreateResp>("/api/library/create", body),
   patchVideo: (id: number, body: { title?: string; source_tag?: string }) =>
     http.patch<Video>(`/api/videos/${id}`, body),
   deleteVideo: (id: number) =>

@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
+import { ImportModal } from "@/library/ImportModal";
 import type { Video, VideoStatus } from "@/api/types";
 
 export const Route = createFileRoute("/")({
@@ -236,103 +237,3 @@ function RowActions({ video }: { video: Video }) {
   );
 }
 
-function ImportModal({ onClose }: { onClose: () => void }) {
-  const qc = useQueryClient();
-  const [path, setPath] = useState("");
-  const [sourceTag, setSourceTag] = useState("");
-  const mutate = useMutation({
-    mutationFn: () =>
-      api.importVideo({
-        path,
-        ...(sourceTag ? { source_tag: sourceTag } : {}),
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["library"] });
-      onClose();
-    },
-  });
-  return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.4)",
-        display: "grid",
-        placeItems: "center",
-        zIndex: 10,
-      }}
-      onClick={onClose}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          background: "var(--paper)",
-          border: "1px solid var(--rule-soft)",
-          padding: "var(--s-5)",
-          minWidth: 480,
-          display: "grid",
-          gap: "var(--s-4)",
-        }}
-      >
-        <h2 style={{ margin: 0, fontFamily: "var(--font-serif, serif)" }}>
-          Import video
-        </h2>
-        <label style={{ display: "grid", gap: "var(--s-2)" }}>
-          <span style={{ color: "var(--ink-soft)" }}>Path on server</span>
-          <input
-            value={path}
-            onChange={(e) => setPath(e.target.value)}
-            autoFocus
-            placeholder="/srv/hibi-nuku/library/Frieren.S01E03.mkv"
-            style={{
-              padding: "var(--s-2) var(--s-3)",
-              background: "var(--paper-alt)",
-              color: "var(--ink)",
-              border: "1px solid var(--rule-soft)",
-              fontFamily: "var(--font-mono, monospace)",
-            }}
-          />
-        </label>
-        <label style={{ display: "grid", gap: "var(--s-2)" }}>
-          <span style={{ color: "var(--ink-soft)" }}>Source tag (optional)</span>
-          <input
-            value={sourceTag}
-            onChange={(e) => setSourceTag(e.target.value)}
-            placeholder="Frieren S01E03"
-            style={{
-              padding: "var(--s-2) var(--s-3)",
-              background: "var(--paper-alt)",
-              color: "var(--ink)",
-              border: "1px solid var(--rule-soft)",
-            }}
-          />
-        </label>
-        {mutate.error && (
-          <pre
-            style={{
-              color: "#a33",
-              background: "var(--paper-alt)",
-              padding: "var(--s-3)",
-              whiteSpace: "pre-wrap",
-              fontSize: "var(--t-meta)",
-            }}
-          >
-            {String(mutate.error)}
-          </pre>
-        )}
-        <div style={{ display: "flex", gap: "var(--s-2)", justifyContent: "flex-end" }}>
-          <button className="btn" onClick={onClose}>
-            Cancel
-          </button>
-          <button
-            className="btn btn-primary"
-            disabled={!path || mutate.isPending}
-            onClick={() => mutate.mutate()}
-          >
-            {mutate.isPending ? "Importing…" : "Import"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}

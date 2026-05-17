@@ -96,3 +96,40 @@ export interface MineResponse {
   audioKey: string;
   imageKey: string;
 }
+
+export interface ProbeTrack {
+  index: number;
+  codecName: string;
+  language: string | null;
+  title: string | null;
+  isImage: boolean;
+}
+
+export interface UploadMediaResp {
+  path: string;
+  probe: {
+    durationMs: number;
+    audio: ProbeTrack[];
+    subtitle: ProbeTrack[];
+  };
+}
+
+export interface UploadSubtitleResp {
+  path: string;
+  format: string;
+}
+
+export interface CreateReq {
+  path: string;
+  title?: string;
+  sourceTag?: string;
+  jpAudioIdx?: number | null;
+  jpSubtitleIdx?: number | null;
+  subtitleFormat?: string | null;
+  subtitleSidecarPath?: string | null;
+}
+
+export interface CreateResp {
+  videoId: number;
+  status: VideoStatus;
+}
