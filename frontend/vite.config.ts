@@ -56,8 +56,11 @@ export default defineConfig({
     },
   },
   server: {
+    host: true,            // bind to 0.0.0.0 so the tailnet can reach it
     port: 5173,
     strictPort: true,
+    // Tailnet hostnames; extend if you connect from a new device.
+    allowedHosts: ["ilios", "100.89.150.38", ".ts.net"],
     proxy: {
       "/api": {
         target: BACKEND,

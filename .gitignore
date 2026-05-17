@@ -27,6 +27,7 @@ backend/data/wk.json.gz
 backend/data/frequency.json.gz
 backend/data/unidic/
 backend/data/dev.db
+backend/data/thumbs/
 
 # Env
 .env
