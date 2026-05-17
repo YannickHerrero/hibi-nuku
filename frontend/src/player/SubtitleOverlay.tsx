@@ -29,7 +29,11 @@ export function SubtitleOverlay({ line, known, onTokenClick }: Props) {
         background: "var(--paper-alt)",
         borderTop: "1px solid var(--rule-soft)",
         padding: "var(--s-4)",
-        minHeight: "calc(var(--s-8) + var(--s-2))",
+        // Holds enough vertical room for one wrapped JP line + the
+        // translation row, so the transport controls below don't jump
+        // when the active subtitle drops out between cues.
+        minHeight: 108,
+        boxSizing: "border-box",
         display: "grid",
         gap: "var(--s-2)",
         justifyItems: "center",
