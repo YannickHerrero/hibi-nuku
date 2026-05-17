@@ -43,19 +43,24 @@ test:
     cd frontend && pnpm test
 
 # Dict bundle builds.
+#
+# Outputs go to $NUKU_DATA_DIR (set in .env). The recipes run from
+# repo root so relative paths used by the CLIs land in a single,
+# predictable location.
+
 build-jmdict:
-    cd backend && cargo run --release --bin build-jmdict -- \
-        --input ../data-sources/JMdict_e \
-        --output data/jmdict.json.gz
+    cargo run --manifest-path backend/Cargo.toml --release --bin build-jmdict -- \
+        --input data-sources/JMdict_e \
+        --output "${NUKU_DATA_DIR}/jmdict.json.gz"
 
 build-wk-bundle:
-    cd backend && cargo run --release --bin build-wk-bundle -- \
-        --output data/wk.json.gz
+    cargo run --manifest-path backend/Cargo.toml --release --bin build-wk-bundle -- \
+        --output "${NUKU_DATA_DIR}/wk.json.gz"
 
 build-frequency:
-    cd backend && cargo run --release --bin build-frequency -- \
-        --input ../data-sources/jpdb_v2.2_frequency \
-        --output data/frequency.json.gz
+    cargo run --manifest-path backend/Cargo.toml --release --bin build-frequency -- \
+        --input data-sources/jpdb_v2.2_frequency \
+        --output "${NUKU_DATA_DIR}/frequency.json.gz"
 
 import-wk:
-    cd backend && cargo run --release --bin wk-import
+    cargo run --manifest-path backend/Cargo.toml --release --bin wk-import

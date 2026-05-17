@@ -11,6 +11,7 @@ use clap::Parser;
 use flate2::Compression;
 use flate2::write::GzEncoder;
 
+use hibi_nuku::config;
 use hibi_nuku::dict::frequency::{Bundle, IndexJson, parse_term_meta_bank};
 
 #[derive(Parser, Debug)]
@@ -18,12 +19,14 @@ struct Args {
     /// Directory containing index.json + term_meta_bank_*.json.
     #[arg(short, long)]
     input: PathBuf,
-    /// Output gzipped JSON bundle.
-    #[arg(short, long, default_value = "backend/data/frequency.json.gz")]
-    output: PathBuf,
+    /// Output gzipped JSON bundle. Defaults to
+    /// `$NUKU_DATA_DIR/frequency.json.gz`.
+    #[arg(short, long)]
+    output: Option<PathBuf>,
 }
 
 fn main() -> Result<()> {
+    let _ = dotenvy::dotenv();
     let args = Args::parse();
     let index: IndexJson = serde_json::from_slice(
         &fs::read(args.input.join("index.json"))
@@ -58,16 +61,19 @@ fn main() -> Result<()> {
         readings,
     };
 
-    if let Some(parent) = args.output.parent() {
+    let output = args
+        .output
+        .unwrap_or_else(|| config::data_dir().join("frequency.json.gz"));
+    if let Some(parent) = output.parent() {
         std::fs::create_dir_all(parent).ok();
     }
     let json = serde_json::to_vec(&bundle)?;
-    let out = std::fs::File::create(&args.output)?;
+    let out = std::fs::File::create(&output)?;
     let mut enc = GzEncoder::new(out, Compression::best());
     enc.write_all(&json)?;
     enc.finish()?;
 
-    let meta = std::fs::metadata(&args.output)?;
-    eprintln!("Wrote {} ({} bytes)", args.output.display(), meta.len());
+    let meta = std::fs::metadata(&output)?;
+    eprintln!("Wrote {} ({} bytes)", output.display(), meta.len());
     Ok(())
 }

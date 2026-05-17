@@ -14,8 +14,10 @@ use hibi_nuku::wk::bundle;
 
 #[derive(Parser, Debug)]
 struct Args {
-    #[arg(short, long, default_value = "backend/data/wk.json.gz")]
-    output: PathBuf,
+    /// Output path. Defaults to `$NUKU_DATA_DIR/wk.json.gz` if set,
+    /// otherwise `backend/data/wk.json.gz` relative to CWD.
+    #[arg(short, long)]
+    output: Option<PathBuf>,
 }
 
 #[tokio::main]
@@ -37,16 +39,19 @@ async fn main() -> Result<()> {
         bundle.vocab.len()
     );
 
-    if let Some(parent) = args.output.parent() {
+    let output = args
+        .output
+        .unwrap_or_else(|| cfg.data_dir.join("wk.json.gz"));
+    if let Some(parent) = output.parent() {
         std::fs::create_dir_all(parent).ok();
     }
     let json = serde_json::to_vec(&bundle)?;
-    let out = std::fs::File::create(&args.output)?;
+    let out = std::fs::File::create(&output)?;
     let mut enc = GzEncoder::new(out, Compression::best());
     enc.write_all(&json)?;
     enc.finish()?;
 
-    let meta = std::fs::metadata(&args.output)?;
-    eprintln!("Wrote {} ({} bytes)", args.output.display(), meta.len());
+    let meta = std::fs::metadata(&output)?;
+    eprintln!("Wrote {} ({} bytes)", output.display(), meta.len());
     Ok(())
 }
