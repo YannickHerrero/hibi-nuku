@@ -2,6 +2,19 @@
 
 Single-binary, single-port, auto-restart on crash, auto-start on boot, logs in journald. No Docker, no Vite, no extra moving parts.
 
+## TL;DR
+
+```sh
+cd /home/ilios/dev/hibi-nuku
+
+make install     # first time only (idempotent — safe to re-run)
+make update      # every time after `git pull`
+make logs        # tail live logs
+make status      # health snapshot
+```
+
+Full target list: `make help`. The rest of this doc is the long story behind those one-liners.
+
 ## Layout once installed
 
 ```
