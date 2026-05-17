@@ -166,6 +166,7 @@ function WatchPage() {
           token={popupToken.token}
           anchor={popupToken.rect}
           videoTitle={video.title}
+          toneTags={parseToneTags(activeLine?.toneTags)}
           onClose={() => setPopupToken(null)}
           onMine={(resolved) => {
             if (!activeLine) return;
@@ -245,6 +246,16 @@ function jumpToLineBy(
   targetIdx = Math.max(0, Math.min(subtitles.length - 1, targetIdx + delta));
   const next = subtitles[targetIdx];
   if (next) videoEl.currentTime = next.startMs / 1000;
+}
+
+function parseToneTags(json: string | null | undefined): string[] {
+  if (!json) return [];
+  try {
+    const v = JSON.parse(json);
+    return Array.isArray(v) ? (v as string[]) : [];
+  } catch {
+    return [];
+  }
 }
 
 function formatTime(ms: number): string {

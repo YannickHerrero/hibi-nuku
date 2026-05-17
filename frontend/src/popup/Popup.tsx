@@ -10,6 +10,7 @@ interface Props {
   token: Token;
   anchor: DOMRect;
   videoTitle?: string;
+  toneTags?: string[];
   onClose: () => void;
   onMine?: (entry: ResolvedEntry) => void;
 }
@@ -22,7 +23,7 @@ export interface ResolvedEntry {
   jm: JmEntry | null;
 }
 
-export function Popup({ token, anchor, onClose, onMine }: Props) {
+export function Popup({ token, anchor, toneTags, onClose, onMine }: Props) {
   const qc = useQueryClient();
   const ref = useRef<HTMLDivElement>(null);
   const pos = positionAnchored(anchor);
@@ -156,13 +157,32 @@ export function Popup({ token, anchor, onClose, onMine }: Props) {
         </p>
       )}
 
-      <div style={{ display: "flex", gap: "var(--s-3)", color: "var(--ink-soft)" }}>
+      <div style={{ display: "flex", gap: "var(--s-3)", color: "var(--ink-soft)", flexWrap: "wrap" }}>
         <span style={{ fontSize: "var(--t-meta)" }}>
           JPDB: {freq ? `#${freq.toLocaleString()}` : "—"}
         </span>
         <span style={{ fontSize: "var(--t-meta)" }}>
           POS: {primary?.senses[0]?.pos.join(", ") ?? token.pos}
         </span>
+        {toneTags && toneTags.length > 0 && (
+          <div style={{ display: "flex", gap: "var(--s-1)", flexWrap: "wrap" }}>
+            {toneTags.map((t) => (
+              <span
+                key={t}
+                style={{
+                  padding: "0 var(--s-2)",
+                  border: "1px solid var(--rule-soft)",
+                  borderRadius: "var(--r-pill)",
+                  fontSize: "var(--t-meta)",
+                  letterSpacing: "var(--track-mono)",
+                  color: "var(--accent)",
+                }}
+              >
+                {t}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       <KanjiBreakdown text={lemma} />
