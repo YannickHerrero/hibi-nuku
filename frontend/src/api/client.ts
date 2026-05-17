@@ -67,4 +67,28 @@ export const api = {
   // Dict + settings
   dictManifest: () => http.get<Manifest>("/api/dict/manifest"),
   settings: () => http.get<Settings>("/api/settings"),
+
+  // Debug
+  hibiStatus: () =>
+    http.get<{
+      base: string;
+      probes: {
+        method: string;
+        path: string;
+        status: number | null;
+        latencyMs: number;
+        bodySnippet: string | null;
+        ok: boolean;
+      }[];
+    }>("/api/debug/hibi-status"),
+  dbStats: () =>
+    http.get<{
+      db_path: string;
+      db_file_bytes: number;
+      tables: Record<string, number>;
+    }>("/api/debug/db-stats"),
+  wipeLlmCache: (model?: string) =>
+    http.delete<{ deleted: number }>(
+      `/api/debug/llm-cache${model ? `?model=${encodeURIComponent(model)}` : ""}`,
+    ),
 };

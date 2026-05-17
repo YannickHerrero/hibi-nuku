@@ -53,6 +53,9 @@ function RootLayout() {
             <Link to="/settings" className="link">
               Settings
             </Link>
+            <Link to="/debug" className="link" style={{ color: "var(--ink-soft)" }}>
+              Debug
+            </Link>
           </nav>
         </div>
       </header>
