@@ -1,21 +1,32 @@
+mod api;
 mod config;
 mod error;
 mod logging;
 
-use anyhow::Result;
+use std::sync::Arc;
 
+use anyhow::{Context, Result};
+use tokio::net::TcpListener;
+
+use crate::api::AppState;
 use crate::config::Config;
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     let _ = dotenvy::dotenv();
     logging::init();
+
     let cfg = Config::from_env()?;
-    tracing::info!(
-        version = env!("CARGO_PKG_VERSION"),
-        host = %cfg.host,
-        port = cfg.port,
-        db = %cfg.db_path.display(),
-        "hibi-nuku boot"
-    );
+    let addr = format!("{}:{}", cfg.host, cfg.port);
+    let state = AppState {
+        config: Arc::new(cfg),
+    };
+    let app = api::router(state);
+
+    let listener = TcpListener::bind(&addr)
+        .await
+        .with_context(|| format!("bind {addr}"))?;
+    tracing::info!(addr = %addr, version = env!("CARGO_PKG_VERSION"), "hibi-nuku listening");
+    axum::serve(listener, app).await?;
     Ok(())
 }
