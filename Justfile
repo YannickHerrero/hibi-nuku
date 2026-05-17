@@ -64,3 +64,13 @@ build-frequency:
 
 import-wk:
     cargo run --manifest-path backend/Cargo.toml --release --bin wk-import
+
+# Build everything, install the binary, restart the systemd unit.
+# Run after `git pull` on the VPS. See docs/deploy.md for first-time
+# setup (unit + /etc/nuku.env).
+deploy:
+    cd frontend && pnpm install --frozen-lockfile && pnpm build
+    cd backend  && cargo build --release
+    sudo install -m 755 backend/target/release/nuku /usr/local/bin/nuku
+    sudo systemctl restart nuku
+    @echo "✓ deployed; tail logs with: journalctl -u nuku -f"

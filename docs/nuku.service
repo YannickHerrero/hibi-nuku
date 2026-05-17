@@ -1,0 +1,45 @@
+[Unit]
+Description=Hibi Nuku (axum server + SPA)
+Documentation=https://github.com/YannickHerrero/hibi-nuku
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ilios
+Group=ilios
+
+# Repo root: ../frontend/dist resolves cleanly and any other
+# defaults that probe candidate dirs land in the right place.
+WorkingDirectory=/home/ilios/dev/hibi-nuku
+
+# All secrets + paths live here, NOT in the repo tree.
+EnvironmentFile=/etc/nuku.env
+
+# Built binary. `just deploy` copies it to /usr/local/bin/nuku.
+ExecStart=/usr/local/bin/nuku
+
+# Auto-restart on crash (panic, OOM, etc) with a short backoff so we
+# don't spin if something's badly broken.
+Restart=on-failure
+RestartSec=3
+
+# Sane hardening defaults for a personal Tailscale-only service.
+# Loosen if you ever need writable /tmp or capabilities.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+# Library + data dirs need writes; whitelist them explicitly.
+ReadWritePaths=/home/ilios/dev/hibi-nuku/backend/data /srv/hibi-nuku/library
+
+# Stop policy: SIGTERM, give it 30s to flush, then SIGKILL.
+TimeoutStopSec=30
+KillMode=mixed
+
+# Logs go to journald — view with `journalctl -u nuku -f`.
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
