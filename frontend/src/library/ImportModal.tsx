@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/client";
 import { uploadMedia, uploadSubtitle } from "@/api/upload";
@@ -111,6 +111,7 @@ function UploadingProgress({
   onCancel: () => void;
 }) {
   const pct = total ? Math.floor((loaded / total) * 100) : null;
+  const { bytesPerSec, etaSec } = useTransferStats(loaded, total);
   return (
     <div style={{ display: "grid", gap: "var(--s-3)" }}>
       <p style={{ margin: 0, color: "var(--ink-soft)" }}>Uploading {name}…</p>
@@ -124,9 +125,24 @@ function UploadingProgress({
           }}
         />
       </div>
-      <div style={{ color: "var(--ink-soft)", fontSize: "var(--t-meta)" }}>
-        {formatBytes(loaded)}
-        {total ? ` / ${formatBytes(total)}` : ""} ({pct ?? "…"}%)
+      <div
+        style={{
+          color: "var(--ink-soft)",
+          fontSize: "var(--t-meta)",
+          display: "flex",
+          justifyContent: "space-between",
+          gap: "var(--s-3)",
+          flexWrap: "wrap",
+        }}
+      >
+        <span>
+          {formatBytes(loaded)}
+          {total ? ` / ${formatBytes(total)}` : ""} ({pct ?? "…"}%)
+        </span>
+        <span>
+          {bytesPerSec !== null ? `${formatBytes(bytesPerSec)}/s` : "—"}
+          {etaSec !== null ? ` · ${formatDuration(etaSec)} left` : ""}
+        </span>
       </div>
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <button className="btn btn-ghost" onClick={onCancel}>
@@ -322,6 +338,52 @@ function trackLabel(t: ProbeTrack): string {
 function stripExt(name: string): string {
   const i = name.lastIndexOf(".");
   return i > 0 ? name.slice(0, i) : name;
+}
+
+// Smoothed transfer rate + ETA from progress samples. Returns null
+// values until we have enough samples to compute a stable rate.
+function useTransferStats(
+  loaded: number,
+  total: number | null,
+): { bytesPerSec: number | null; etaSec: number | null } {
+  const startRef = useRef<{ t: number; loaded: number } | null>(null);
+  const lastRef = useRef<{ t: number; loaded: number } | null>(null);
+  const [bytesPerSec, setBytesPerSec] = useState<number | null>(null);
+
+  useEffect(() => {
+    const now = performance.now();
+    if (startRef.current === null) {
+      startRef.current = { t: now, loaded };
+      lastRef.current = { t: now, loaded };
+      return;
+    }
+    const last = lastRef.current!;
+    const dt = (now - last.t) / 1000;
+    if (dt < 0.25) return; // throttle: at most ~4 samples/sec
+    const instant = (loaded - last.loaded) / dt;
+    // Exponential moving average to smooth out browser jitter.
+    setBytesPerSec((prev) => (prev === null ? instant : prev * 0.6 + instant * 0.4));
+    lastRef.current = { t: now, loaded };
+  }, [loaded]);
+
+  const etaSec =
+    total !== null && bytesPerSec !== null && bytesPerSec > 1024
+      ? Math.max(0, (total - loaded) / bytesPerSec)
+      : null;
+
+  return { bytesPerSec, etaSec };
+}
+
+function formatDuration(sec: number): string {
+  if (!isFinite(sec)) return "—";
+  const s = Math.round(sec);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  const rem = s % 60;
+  if (m < 60) return rem === 0 ? `${m}m` : `${m}m ${rem}s`;
+  const h = Math.floor(m / 60);
+  const mRem = m % 60;
+  return mRem === 0 ? `${h}h` : `${h}h ${mRem}m`;
 }
 
 function formatBytes(b: number): string {
