@@ -6,6 +6,7 @@ mod library;
 mod logging;
 mod media;
 mod subtitle;
+mod tokenize;
 
 use std::sync::Arc;
 
