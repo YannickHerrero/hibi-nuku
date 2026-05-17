@@ -8,21 +8,17 @@ interface Props {
 export function Controls({ videoEl, durationMs }: Props) {
   const [playing, setPlaying] = useState(false);
   const [currentMs, setCurrentMs] = useState(0);
-  const [rate, setRate] = useState(1);
   const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!videoEl) return;
     const onPlay = () => setPlaying(true);
     const onPause = () => setPlaying(false);
-    const onRate = () => setRate(videoEl.playbackRate);
     videoEl.addEventListener("play", onPlay);
     videoEl.addEventListener("pause", onPause);
-    videoEl.addEventListener("ratechange", onRate);
     return () => {
       videoEl.removeEventListener("play", onPlay);
       videoEl.removeEventListener("pause", onPause);
-      videoEl.removeEventListener("ratechange", onRate);
     };
   }, [videoEl]);
 
@@ -78,20 +74,6 @@ export function Controls({ videoEl, durationMs }: Props) {
         }}
         style={{ flex: 1 }}
       />
-      <label style={{ fontSize: "var(--t-meta)", color: "var(--ink-soft)" }}>
-        {rate.toFixed(2)}x
-        <input
-          type="range"
-          min={0.5}
-          max={2}
-          step={0.05}
-          value={rate}
-          onChange={(e) => {
-            videoEl.playbackRate = Number(e.target.value);
-          }}
-          style={{ marginLeft: "var(--s-2)", verticalAlign: "middle" }}
-        />
-      </label>
     </div>
   );
 }

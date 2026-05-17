@@ -198,22 +198,32 @@ function useShortcuts({
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement | null)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA") return;
-      switch (e.key.toLowerCase()) {
+      // Use raw e.key (not lowercase) so we can distinguish arrows
+      // and Space from letters.
+      switch (e.key) {
         case " ":
           e.preventDefault();
           if (videoEl.paused) videoEl.play();
           else videoEl.pause();
           break;
+        case "ArrowLeft":
         case "a":
+        case "A":
+          e.preventDefault();
           jumpToLineBy(videoEl, subtitles, -1);
           break;
+        case "ArrowRight":
         case "d":
+        case "D":
+          e.preventDefault();
           jumpToLineBy(videoEl, subtitles, 1);
           break;
         case "z":
+        case "Z":
           if (current) videoEl.currentTime = current.startMs / 1000;
           break;
         case "s":
+        case "S":
           videoEl.pause();
           setPopup(null);
           // Mining shortcut hookup lands in Phase 15.

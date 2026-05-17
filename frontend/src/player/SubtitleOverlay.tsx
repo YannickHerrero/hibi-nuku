@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { SubtitleLine, Token } from "@/api/types";
 import type { KnownWord } from "@/api/types";
 
@@ -8,9 +8,11 @@ interface Props {
   onTokenClick: (token: Token, rect: DOMRect) => void;
 }
 
-/// Subtitle strip rendered below the video — not overlayed on the
-/// frame. Click a token to open the popup; hover does nothing so the
-/// popup doesn't flicker as the eye scans the line.
+/// Subtitle strip rendered below the video. Two stacked rows:
+///   1. JP line as clickable tokens, underlined by known-words status.
+///   2. English translation, blurred until hovered (so you can self-test
+///      without spoiling).
+/// Hover does nothing for the popup; tap/click only.
 export function SubtitleOverlay({ line, known, onTokenClick }: Props) {
   const knownByLemma = useMemo(() => {
     const m = new Map<string, KnownWord["status"]>();
@@ -26,37 +28,74 @@ export function SubtitleOverlay({ line, known, onTokenClick }: Props) {
       style={{
         background: "var(--paper-alt)",
         borderTop: "1px solid var(--rule-soft)",
-        padding: "var(--s-4) var(--s-4)",
-        minHeight: "calc(var(--s-7) + var(--s-2))",
-        textAlign: "center",
+        padding: "var(--s-4)",
+        minHeight: "calc(var(--s-8) + var(--s-2))",
+        display: "grid",
+        gap: "var(--s-2)",
+        justifyItems: "center",
       }}
     >
       {!line ? (
         <span style={{ color: "var(--ink-faint)" }}>—</span>
       ) : (
-        <div
-          lang="ja"
-          style={{
-            display: "inline-block",
-            fontSize: "clamp(20px, 2.6vw, 30px)",
-            lineHeight: 1.5,
-            maxWidth: "100%",
-          }}
-        >
-          {tokens.length === 0 ? (
-            <span>{line.rawText}</span>
-          ) : (
-            tokens.map((t, i) => (
-              <TokenSpan
-                key={i}
-                token={t}
-                status={knownByLemma.get(t.lemma)}
-                onClick={onTokenClick}
-              />
-            ))
-          )}
-        </div>
+        <>
+          <div
+            lang="ja"
+            style={{
+              fontSize: "clamp(20px, 2.6vw, 30px)",
+              lineHeight: 1.5,
+              maxWidth: "100%",
+              textAlign: "center",
+            }}
+          >
+            {tokens.length === 0 ? (
+              <span>{line.rawText}</span>
+            ) : (
+              tokens.map((t, i) => (
+                <TokenSpan
+                  key={i}
+                  token={t}
+                  status={knownByLemma.get(t.lemma)}
+                  onClick={onTokenClick}
+                />
+              ))
+            )}
+          </div>
+          <BlurredTranslation text={line.translation} />
+        </>
       )}
+    </div>
+  );
+}
+
+function BlurredTranslation({ text }: { text: string | null }) {
+  const [revealed, setRevealed] = useState(false);
+  if (!text) return null;
+  return (
+    <div
+      onMouseEnter={() => setRevealed(true)}
+      onMouseLeave={() => setRevealed(false)}
+      onClick={() => setRevealed((v) => !v)}
+      style={{
+        color: "var(--ink-soft)",
+        fontSize: "var(--t-body-sm)",
+        maxWidth: "min(720px, 100%)",
+        textAlign: "center",
+        cursor: "pointer",
+        // The whole row is the hover target; the inner text carries
+        // the blur so it can be unblurred without re-laying out.
+        userSelect: revealed ? "text" : "none",
+      }}
+      title={revealed ? undefined : "Hover or tap to reveal"}
+    >
+      <span
+        style={{
+          filter: revealed ? "none" : "blur(6px)",
+          transition: "filter 120ms ease",
+        }}
+      >
+        {text}
+      </span>
     </div>
   );
 }
@@ -70,35 +109,61 @@ function TokenSpan({
   status: KnownWord["status"] | undefined;
   onClick: (t: Token, rect: DOMRect) => void;
 }) {
-  const color =
-    status === "known"
-      ? "var(--status-known)"
-      : status === "learning"
-        ? "var(--status-learning)"
-        : status === "ignored"
-          ? "var(--status-ignored)"
-          : token.pos === "punctuation"
-            ? "var(--ink-faint)"
-            : "var(--ink)";
+  const style = stylesForStatus(token, status);
+  if (token.pos === "punctuation") {
+    return <span style={{ color: "var(--ink-faint)" }}>{token.surface}</span>;
+  }
   return (
     <span
       onClick={(e) => {
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
         onClick(token, rect);
       }}
-      style={{
-        color,
-        cursor: "pointer",
-        padding: "0 1px",
-        borderBottom:
-          status === "learning"
-            ? "2px solid var(--status-learning)"
-            : undefined,
-      }}
+      style={style}
     >
       {token.surface}
     </span>
   );
+}
+
+function stylesForStatus(
+  token: Token,
+  status: KnownWord["status"] | undefined,
+): React.CSSProperties {
+  const base: React.CSSProperties = {
+    color: "var(--ink)",
+    cursor: "pointer",
+    padding: "0 1px",
+    // textDecoration-* lets us style underline thickness + offset cleanly.
+    textDecorationLine: "underline",
+    textDecorationThickness: "2px",
+    textUnderlineOffset: "4px",
+  };
+  switch (status) {
+    case "known":
+      return { ...base, textDecorationColor: "var(--status-known)" };
+    case "learning":
+      return {
+        ...base,
+        textDecorationColor: "var(--status-learning)",
+        textDecorationStyle: "solid",
+        textDecorationThickness: "3px",
+      };
+    case "ignored":
+      return {
+        ...base,
+        color: "var(--ink-faint)",
+        textDecorationLine: "none",
+      };
+    default:
+      // "new": never-seen — dashed underline in muted ink-soft.
+      return {
+        ...base,
+        color: token.pos === "particle" ? "var(--ink-soft)" : "var(--ink)",
+        textDecorationColor: "var(--ink-faint)",
+        textDecorationStyle: "dashed",
+      };
+  }
 }
 
 function safeParseTokens(json: string): Token[] {
