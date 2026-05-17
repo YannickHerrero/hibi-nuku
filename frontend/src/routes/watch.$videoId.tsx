@@ -133,7 +133,14 @@ function WatchPage() {
       <div
         style={{
           background: "#000",
-          aspectRatio: "16/9",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          // Reserve vertical space for the subtitle strip + transport
+          // controls below (~175px total). The video stays 16:9 and
+          // scales down to fit whichever dimension binds first.
+          maxHeight: "calc(100vh - 175px)",
+          overflow: "hidden",
         }}
       >
         <video
@@ -142,7 +149,13 @@ function WatchPage() {
             setVideoEl(el);
           }}
           src={streamUrl}
-          style={{ width: "100%", height: "100%", display: "block" }}
+          style={{
+            display: "block",
+            maxWidth: "100%",
+            maxHeight: "calc(100vh - 175px)",
+            width: "auto",
+            height: "auto",
+          }}
           controls={false}
           playsInline
         />
