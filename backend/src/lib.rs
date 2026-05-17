@@ -6,6 +6,7 @@ pub mod db;
 pub mod error;
 pub mod jmdict;
 pub mod library;
+pub mod llm;
 pub mod logging;
 pub mod media;
 pub mod subtitle;

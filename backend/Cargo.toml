@@ -39,7 +39,9 @@ quick-xml = "0.40"
 flate2 = "1"
 clap = { version = "4", features = ["derive"] }
 sha2 = "0.10"
-hex = "0.4"
+hex = "0.4.3"
+reqwest = { version = "0.13.2", default-features = false, features = ["json", "rustls", "multipart", "stream"] }
+futures = "0.3"
 
 [profile.release]
 lto = "thin"
