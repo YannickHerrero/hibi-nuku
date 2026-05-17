@@ -491,6 +491,41 @@ function Caches() {
           </button>
         </div>
       </div>
+      <hr />
+      <div style={{ display: "grid", gap: "var(--s-2)" }}>
+        <div style={{ color: "var(--ink-soft)", fontSize: "var(--t-meta)" }}>
+          Service-worker caches. `nuku-dict` is configured CacheFirst,
+          so once a dict bundle is cached the browser never refetches
+          it — wiping here is required after rebuilding a bundle.
+        </div>
+        <div>
+          <button
+            className="btn"
+            onClick={async () => {
+              if (typeof caches === "undefined") {
+                alert("Cache Storage API unavailable.");
+                return;
+              }
+              const names = await caches.keys();
+              const wiped: string[] = [];
+              for (const n of names) {
+                if (await caches.delete(n)) wiped.push(n);
+              }
+              // Also kill any registered SW so the next page load
+              // re-fetches everything from the network.
+              if ("serviceWorker" in navigator) {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                for (const r of regs) await r.unregister();
+              }
+              alert(
+                `Cleared SW caches: ${wiped.join(", ") || "none"}\nUnregistered service workers.\nReload now.`,
+              );
+            }}
+          >
+            Wipe SW caches + unregister
+          </button>
+        </div>
+      </div>
     </Section>
   );
 }

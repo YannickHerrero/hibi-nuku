@@ -31,8 +31,23 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,ico,svg,woff,woff2}"],
         runtimeCaching: [
           {
-            urlPattern: /\/api\/dict\//,
-            handler: "CacheFirst",
+            // /api/dict/manifest must be NetworkFirst so version
+            // changes propagate. Without this the SW serves stale
+            // manifests indefinitely and hydrate() thinks we're
+            // current even after rebuilding bundles.
+            urlPattern: /\/api\/dict\/manifest/,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "nuku-dict-manifest",
+              networkTimeoutSeconds: 5,
+            },
+          },
+          {
+            // Bundle bodies: StaleWhileRevalidate gives us instant
+            // offline reads + background refresh when a new version
+            // is available. CacheFirst would never refetch.
+            urlPattern: /\/api\/dict\/(jmdict|wk|frequency)/,
+            handler: "StaleWhileRevalidate",
             options: {
               cacheName: "nuku-dict",
               expiration: { maxEntries: 6 },
