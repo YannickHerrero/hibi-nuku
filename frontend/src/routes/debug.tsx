@@ -7,6 +7,7 @@ import { getTheme } from "@/lib/theme";
 import { openNukuDb, getMeta } from "@/dict/idb";
 import { lookupSurface, frequencyRank, wkKanji } from "@/dict/lookup";
 import { deinflect } from "@/dict/deinflect";
+import { hydrate, type HydrateProgress } from "@/dict/hydrate";
 
 export const Route = createFileRoute("/debug")({
   component: DebugPage,
@@ -339,19 +340,59 @@ function IndexedDbInspector() {
     queryKey: ["debug-idb"],
     queryFn: scanIndexedDb,
   });
+  const [hydrating, setHydrating] = useState(false);
+  const [progress, setProgress] = useState<HydrateProgress | null>(null);
+  const [hydrateError, setHydrateError] = useState<string | null>(null);
+
+  const runHydrate = async (force: boolean) => {
+    setHydrateError(null);
+    setHydrating(true);
+    try {
+      if (force) {
+        // Bust the version meta so the version-equality check in
+        // hydrate() always re-downloads.
+        const db = await openNukuDb();
+        await db.delete("meta", "jmdict");
+        await db.delete("meta", "wk");
+        await db.delete("meta", "frequency");
+      }
+      await hydrate(setProgress);
+      await refetch();
+    } catch (e) {
+      setHydrateError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setHydrating(false);
+    }
+  };
 
   return (
     <Section title="IndexedDB (client)">
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--s-2)" }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--s-2)", flexWrap: "wrap" }}>
         <button className="btn" disabled={isFetching} onClick={() => refetch()}>
           {isFetching ? "…" : "Refresh"}
+        </button>
+        <button
+          className="btn"
+          disabled={hydrating}
+          onClick={() => runHydrate(false)}
+          title="Download bundles for any store whose version differs from the server"
+        >
+          {hydrating ? "Hydrating…" : "Hydrate (if needed)"}
+        </button>
+        <button
+          className="btn"
+          disabled={hydrating}
+          onClick={() => runHydrate(true)}
+          title="Wipe stored version meta then re-download all three bundles"
+        >
+          {hydrating ? "…" : "Force re-hydrate"}
         </button>
         <button
           className="btn"
           onClick={async () => {
             if (
               !confirm(
-                "Wipe IndexedDB? You'll need to re-hydrate via /setup before the popup works.",
+                "Wipe IndexedDB? You'll need to re-hydrate (button above) before the popup works.",
               )
             ) {
               return;
@@ -363,6 +404,15 @@ function IndexedDbInspector() {
           Wipe + reload
         </button>
       </div>
+      {progress && (
+        <div style={{ color: "var(--ink-soft)", fontSize: "var(--t-meta)" }}>
+          {progress.phase === "ready" ? "Done." : `${progress.phase}…`}
+          {progress.total && progress.loaded
+            ? ` ${Math.floor((progress.loaded / progress.total) * 100)}%`
+            : ""}
+        </div>
+      )}
+      {hydrateError && <Err>{hydrateError}</Err>}
       {data && (
         <KV
           rows={[
