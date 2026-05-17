@@ -1,7 +1,10 @@
 pub mod auth;
 pub mod dict;
 pub mod health;
+pub mod hibi_proxy;
 pub mod library;
+pub mod mine;
+pub mod settings;
 pub mod videos;
 
 use std::sync::Arc;
@@ -14,11 +17,14 @@ use tower_http::trace::TraceLayer;
 use crate::config::Config;
 use crate::tokenize::jmdict_index::JmdictIndex;
 
+use self::hibi_proxy::KnownCache;
+
 #[derive(Clone)]
 pub struct AppState {
     pub config: Arc<Config>,
     pub db: SqlitePool,
     pub jmdict: Arc<JmdictIndex>,
+    pub known_cache: Arc<KnownCache>,
 }
 
 pub fn router(state: AppState) -> Router {
@@ -28,6 +34,9 @@ pub fn router(state: AppState) -> Router {
         .merge(library::routes())
         .merge(videos::routes())
         .merge(dict::routes())
+        .merge(mine::routes())
+        .merge(hibi_proxy::routes())
+        .merge(settings::routes())
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             auth::require_bearer,

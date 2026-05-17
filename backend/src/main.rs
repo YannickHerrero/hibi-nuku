@@ -34,6 +34,7 @@ async fn main() -> Result<()> {
         config: Arc::new(cfg),
         db: pool,
         jmdict: Arc::new(jmdict_index),
+        known_cache: Arc::new(hibi_nuku::api::hibi_proxy::KnownCache::new()),
     };
     let app = api::router(state);
 
