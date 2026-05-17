@@ -50,6 +50,10 @@ impl IntoResponse for AppError {
         let msg = self.to_string();
         if status.is_server_error() {
             tracing::error!(error = %msg, "internal error");
+        } else if matches!(status, StatusCode::BAD_REQUEST | StatusCode::CONFLICT) {
+            // Visible at default info level so misuse surfaces in
+            // dev / prod logs without needing a debug filter.
+            tracing::warn!(error = %msg, status = %status, "client error");
         } else {
             tracing::debug!(error = %msg, status = %status, "client error");
         }
