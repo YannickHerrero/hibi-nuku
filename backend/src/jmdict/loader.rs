@@ -49,6 +49,7 @@ pub fn build_index(mut bundle: Bundle) -> JmdictIndex {
             glosses,
             pos_tags,
             rules: entry.rules,
+            priority: entry.priority,
         });
     }
     idx

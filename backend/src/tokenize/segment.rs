@@ -164,6 +164,7 @@ mod tests {
             glosses: vec!["to eat".into()],
             pos_tags: vec!["v1".into()],
             rules: vec!["v1".into()],
+            priority: 0,
         });
         d.insert(JmdictEntry {
             seq: 2,
@@ -172,6 +173,7 @@ mod tests {
             glosses: vec!["today".into()],
             pos_tags: vec!["n".into()],
             rules: vec![],
+            priority: 0,
         });
         d
     }

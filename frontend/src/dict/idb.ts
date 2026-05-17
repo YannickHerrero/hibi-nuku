@@ -8,6 +8,11 @@ export interface JmEntry {
   readings: string[];
   senses: { pos: string[]; glosses: string[] }[];
   rules?: string[];
+  // Sum of JMDict priority markers (news1/ichi1/spec1/gai1 = 100,
+  // "2" band = 20, nfXX = inverse band rank). The popup sorts
+  // candidates by this so the most-common entry for a surface wins
+  // (e.g. 僕 → ぼく, not しもべ). Default 0 = no priority info.
+  priority?: number;
 }
 
 export interface WkKanji {

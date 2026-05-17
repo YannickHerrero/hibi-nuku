@@ -24,6 +24,9 @@ pub struct JmdictEntry {
     /// Deinflection rule tags (`v1`, `v5k`, `adj-i`, …) — used by
     /// the deinflector to filter compatible matches.
     pub rules: Vec<String>,
+    /// JMDict priority score (higher = more common). Used to rank
+    /// competing entries that share a surface form.
+    pub priority: i32,
 }
 
 impl JmdictIndex {
@@ -42,10 +45,19 @@ impl JmdictIndex {
     }
 
     pub fn lookup(&self, surface: &str) -> Vec<&JmdictEntry> {
-        self.by_surface
+        let mut out: Vec<&JmdictEntry> = self
+            .by_surface
             .get(surface)
             .map(|seqs| seqs.iter().filter_map(|s| self.entries.get(s)).collect())
-            .unwrap_or_default()
+            .unwrap_or_default();
+        // Sort by priority desc, seq asc as stable tiebreaker.
+        // Defensive: callers don't have to rely on insertion order.
+        out.sort_by(|a, b| {
+            b.priority
+                .cmp(&a.priority)
+                .then_with(|| a.seq.cmp(&b.seq))
+        });
+        out
     }
 
     pub fn entry(&self, seq: i64) -> Option<&JmdictEntry> {

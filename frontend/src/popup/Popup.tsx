@@ -29,7 +29,9 @@ export function Popup({ token, anchor, toneTags, onClose, onMine }: Props) {
   const pos = positionAnchored(anchor);
 
   // Resolve the token to JMDict entries (start from lemma, fall back
-  // to deinflection paths).
+  // to deinflection paths). Candidates are then sorted by JMDict
+  // priority desc so the most-common entry wins regardless of the
+  // index's insertion order. seq asc is a stable tiebreaker.
   const { data: entries } = useQuery({
     queryKey: ["jm-resolve", token.lemma, token.surface],
     queryFn: async () => {
@@ -44,6 +46,12 @@ export function Popup({ token, anchor, toneTags, onClose, onMine }: Props) {
       await tryLookup(token.lemma);
       await tryLookup(token.surface);
       for (const cand of deinflect(token.surface)) await tryLookup(cand.stem);
+      seqs.sort((a, b) => {
+        const pa = a.priority ?? 0;
+        const pb = b.priority ?? 0;
+        if (pa !== pb) return pb - pa;
+        return a.seq - b.seq;
+      });
       return seqs;
     },
   });
