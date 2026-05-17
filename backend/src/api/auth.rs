@@ -12,6 +12,7 @@ use super::AppState;
 ///
 /// The bearer is a static value loaded from `NUKU_TOKEN`. Single user
 /// behind Tailscale; this is defense-in-depth, not real auth.
+#[allow(dead_code)]
 pub async fn require_bearer(
     State(state): State<AppState>,
     req: Request,
