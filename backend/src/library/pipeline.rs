@@ -15,6 +15,7 @@ use tracing::{error, info};
 
 use crate::config::Config;
 use crate::library::lines;
+use crate::subtitle::{ass, srt};
 use crate::library::model::VideoStatus;
 use crate::library::repo;
 use crate::library::tracks;
@@ -24,6 +25,19 @@ use crate::media::thumb;
 use crate::subtitle;
 use crate::tokenize::jmdict_index::JmdictIndex;
 use crate::tokenize::{lindera_wrap, segment};
+
+async fn parse_sidecar(path_s: &str) -> Result<Vec<crate::subtitle::Line>> {
+    let path = Path::new(path_s);
+    let body = tokio::fs::read_to_string(path)
+        .await
+        .with_context(|| format!("read sidecar {path_s}"))?;
+    let lower = path_s.to_ascii_lowercase();
+    if lower.ends_with(".ass") || lower.ends_with(".ssa") {
+        ass::parse(&body)
+    } else {
+        srt::parse(&body)
+    }
+}
 
 /// Run the import pipeline for an already-persisted video row.
 ///
@@ -51,15 +65,25 @@ async fn drive(
         .await?
         .ok_or_else(|| anyhow!("video {video_id} vanished"))?;
 
-    let Some(sub_idx) = video.jp_subtitle_idx else {
-        return Err(anyhow!("no Japanese subtitle track on this file"));
-    };
-    let format = video
-        .subtitle_format
-        .as_deref()
-        .ok_or_else(|| anyhow!("no subtitle format recorded"))?;
+    let sidecar = repo::get_subtitle_sidecar(&pool, video_id).await?;
 
-    if tracks::is_image_subtitle(format) {
+    // If a sidecar file is set, it wins. Otherwise we need an embedded
+    // subtitle track index + format.
+    let (sub_idx, format) = if sidecar.is_some() {
+        (None::<i64>, video.subtitle_format.clone().unwrap_or_default())
+    } else {
+        let idx = video
+            .jp_subtitle_idx
+            .ok_or_else(|| anyhow!("no Japanese subtitle track or sidecar"))?;
+        let fmt = video
+            .subtitle_format
+            .as_deref()
+            .ok_or_else(|| anyhow!("no subtitle format recorded"))?
+            .to_string();
+        (Some(idx), fmt)
+    };
+
+    if !format.is_empty() && tracks::is_image_subtitle(&format) {
         return Err(anyhow!(
             "image-based subtitles ({format}) not supported"
         ));
@@ -84,9 +108,15 @@ async fn drive(
         tracing::warn!(error = %e, "thumbnail path persist failed");
     }
 
-    let parsed = subtitle::extract::extract_and_parse(path, sub_idx as usize, format)
-        .await
-        .context("subtitle extraction")?;
+    let parsed = if let Some(sidecar_path) = sidecar.as_deref() {
+        info!(video_id, sidecar = sidecar_path, "using sidecar subtitle");
+        parse_sidecar(sidecar_path).await.context("parse sidecar subtitle")?
+    } else {
+        let idx = sub_idx.expect("sub_idx set when no sidecar");
+        subtitle::extract::extract_and_parse(path, idx as usize, &format)
+            .await
+            .context("subtitle extraction")?
+    };
 
     if parsed.is_empty() {
         return Err(anyhow!("subtitle track has 0 dialogue lines"));

@@ -5,6 +5,7 @@ pub mod hibi_proxy;
 pub mod library;
 pub mod mine;
 pub mod settings;
+pub mod upload;
 pub mod videos;
 
 use std::sync::Arc;
@@ -33,6 +34,7 @@ pub fn router(state: AppState) -> Router {
 
     let protected = Router::new()
         .merge(library::routes())
+        .merge(upload::routes())
         .merge(videos::routes())
         .merge(dict::routes())
         .merge(mine::routes())
