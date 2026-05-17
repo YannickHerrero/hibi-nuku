@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { routeTree } from "./routeTree.gen";
 import { applyStoredTheme } from "@/lib/theme";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import "./styles/app.css";
 
@@ -38,8 +39,10 @@ if (!rootEl) throw new Error("missing #root");
 
 createRoot(rootEl).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>
+    </ErrorBoundary>
   </StrictMode>,
 );
