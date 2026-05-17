@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/client";
-import { getToken } from "@/lib/token";
 import { SubtitleOverlay } from "@/player/SubtitleOverlay";
 import { Controls } from "@/player/Controls";
 import { Popup, type ResolvedEntry } from "@/popup/Popup";
@@ -46,15 +45,7 @@ function WatchPage() {
   } | null>(null);
   const [resumedFromProgress, setResumedFromProgress] = useState(false);
 
-  // The <video> element can't set custom headers, so we attach the
-  // bearer as a query param. The backend's auth middleware will need
-  // to accept it; until then, the user can keep the dev token short
-  // or rely on Tailscale auth alone.
-  const streamUrl = useMemo(() => {
-    const t = getToken();
-    const base = api.streamUrl(id);
-    return t ? `${base}${base.includes("?") ? "&" : "?"}token=${encodeURIComponent(t)}` : base;
-  }, [id]);
+  const streamUrl = useMemo(() => api.streamUrl(id), [id]);
 
   useEffect(() => {
     if (!videoEl || !progress || resumedFromProgress) return;

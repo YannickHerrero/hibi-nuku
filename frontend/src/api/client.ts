@@ -1,4 +1,5 @@
 import { http } from "./http";
+import { getToken } from "@/lib/token";
 import type {
   CreateReq,
   CreateResp,
@@ -11,6 +12,16 @@ import type {
   Video,
 } from "./types";
 import type { KnownWord } from "./types";
+
+// `<img src>` / `<video src>` can't carry custom headers, so for
+// protected media we append the bearer as a query param. The backend
+// auth middleware accepts either form.
+function withToken(path: string): string {
+  const t = getToken();
+  if (!t) return path;
+  const sep = path.includes("?") ? "&" : "?";
+  return `${path}${sep}token=${encodeURIComponent(t)}`;
+}
 
 export const api = {
   health: () => http.get<{ ok: true; version: string }>("/api/health"),
@@ -33,8 +44,8 @@ export const api = {
   postProgress: (id: number, body: { position_ms: number; device?: string }) =>
     http.post<ProgressResp>(`/api/videos/${id}/progress`, body),
   streamUrl: (id: number, fromSec?: number) =>
-    `/api/videos/${id}/stream${fromSec ? `?from=${fromSec}` : ""}`,
-  thumbnailUrl: (id: number) => `/api/videos/${id}/thumbnail`,
+    withToken(`/api/videos/${id}/stream${fromSec ? `?from=${fromSec}` : ""}`),
+  thumbnailUrl: (id: number) => withToken(`/api/videos/${id}/thumbnail`),
 
   // Mining + Hibi
   mine: (body: MineRequest) => http.post<MineResponse>("/api/mine", body),
