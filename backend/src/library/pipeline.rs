@@ -50,8 +50,11 @@ pub async fn run(
     video_id: i64,
 ) {
     if let Err(e) = drive(pool.clone(), jmdict, config, video_id).await {
-        error!(video_id, error = %e, "import pipeline failed");
-        let _ = repo::set_status(&pool, video_id, VideoStatus::Error, Some(&e.to_string())).await;
+        // {:#} joins anyhow's context chain so we see the real cause,
+        // not just the topmost `.context("...")` wrapper.
+        let full = format!("{e:#}");
+        error!(video_id, error = %full, "import pipeline failed");
+        let _ = repo::set_status(&pool, video_id, VideoStatus::Error, Some(&full)).await;
     }
 }
 
