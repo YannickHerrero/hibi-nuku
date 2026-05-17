@@ -12,6 +12,7 @@ use std::sync::Arc;
 use axum::Router;
 use axum::middleware;
 use sqlx::SqlitePool;
+use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 
 use crate::config::Config;
@@ -42,8 +43,18 @@ pub fn router(state: AppState) -> Router {
             auth::require_bearer,
         ));
 
-    Router::new()
+    let mut app = Router::new()
         .nest("/api", public.merge(protected))
-        .with_state(state)
-        .layer(TraceLayer::new_for_http())
+        .with_state(state.clone());
+
+    // Production: serve the built frontend from frontend/dist. In dev
+    // Vite proxies /api → backend, so the static fallback never runs.
+    let dist = std::path::PathBuf::from("frontend/dist");
+    if dist.exists() {
+        let index = dist.join("index.html");
+        let serve_dir = ServeDir::new(&dist).fallback(ServeFile::new(&index));
+        app = app.fallback_service(serve_dir);
+    }
+
+    app.layer(TraceLayer::new_for_http())
 }
