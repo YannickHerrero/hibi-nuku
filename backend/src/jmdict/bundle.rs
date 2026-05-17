@@ -19,6 +19,16 @@ pub struct Entry {
     /// from sense POS tags for fast filtering.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub rules: Vec<String>,
+    /// Sum of JMDict priority markers across all k_ele + r_ele —
+    /// higher = more common. Used to rank competing entries when
+    /// multiple share a surface form (e.g. 僕 ぼく vs 僕 しもべ).
+    /// 0 = no priority info.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub priority: i32,
+}
+
+fn is_zero(n: &i32) -> bool {
+    *n == 0
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

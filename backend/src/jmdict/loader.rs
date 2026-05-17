@@ -20,7 +20,16 @@ pub fn load_bundle(path: &Path) -> Result<Bundle> {
     Ok(bundle)
 }
 
-pub fn build_index(bundle: Bundle) -> JmdictIndex {
+pub fn build_index(mut bundle: Bundle) -> JmdictIndex {
+    // Sort by priority desc, ent_seq asc as stable tiebreaker. Means
+    // `JmdictIndex.lookup()` (which preserves insertion order on the
+    // per-surface vec) returns the most-common entries first.
+    bundle.entries.sort_by(|a, b| {
+        b.priority
+            .cmp(&a.priority)
+            .then_with(|| a.seq.cmp(&b.seq))
+    });
+
     let mut idx = JmdictIndex::new();
     for entry in bundle.entries {
         let pos_tags: Vec<String> = entry

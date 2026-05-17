@@ -77,9 +77,19 @@ async function hydrateJmdict(
   if (!resp.ok) throw new Error(`jmdict fetch: ${resp.status}`);
   const bundle = (await resp.json()) as {
     version: string;
-    entries: JmEntry[];
+    entries: (JmEntry & { priority?: number })[];
   };
   const db = await openNukuDb();
+
+  // Sort entries by priority desc so the per-surface inverted index
+  // returns the most-common entries first. Stable tiebreaker on seq
+  // matches the backend's `loader::build_index` for consistency.
+  bundle.entries.sort((a, b) => {
+    const pa = a.priority ?? 0;
+    const pb = b.priority ?? 0;
+    if (pa !== pb) return pb - pa;
+    return a.seq - b.seq;
+  });
 
   // Build an inverted index keyed by every kanji and reading surface.
   const indexMap = new Map<string, number[]>();

@@ -45,6 +45,7 @@ pub fn parse(xml: &str) -> Result<Vec<Entry>> {
                 }
                 b"gloss" => state.collecting_gloss = true,
                 b"keb" | b"reb" | b"pos" => state.collecting_text = true,
+                b"ke_pri" | b"re_pri" => state.collecting_priority = true,
                 _ => {}
             },
             Ok(Event::End(e)) => match e.name().as_ref() {
@@ -58,7 +59,9 @@ pub fn parse(xml: &str) -> Result<Vec<Entry>> {
                             rules: std::mem::take(&mut state.rules_seen)
                                 .into_iter()
                                 .collect(),
+                            priority: state.priority,
                         });
+                        state.priority = 0;
                     }
                 }
                 b"k_ele" => state.in_kanji = false,
@@ -72,6 +75,7 @@ pub fn parse(xml: &str) -> Result<Vec<Entry>> {
                 }
                 b"gloss" => state.collecting_gloss = false,
                 b"keb" | b"reb" | b"pos" => state.collecting_text = false,
+                b"ke_pri" | b"re_pri" => state.collecting_priority = false,
                 _ => {}
             },
             Ok(Event::Text(t)) => handle_text(&mut state, &t)?,
@@ -116,27 +120,27 @@ struct State {
     readings: Vec<String>,
     senses: Vec<Sense>,
     rules_seen: HashSet<String>,
+    priority: i32,
 
     in_kanji: bool,
     in_reading: bool,
     in_sense: bool,
     collecting_text: bool,
     collecting_gloss: bool,
+    collecting_priority: bool,
 
     current_sense_pos: Vec<String>,
     current_sense_glosses: Vec<String>,
 }
 
 fn handle_text(state: &mut State, t: &BytesText<'_>) -> Result<()> {
-    if !(state.collecting_text || state.collecting_gloss) && state.seq.is_some() {
+    if !(state.collecting_text || state.collecting_gloss || state.collecting_priority)
+        && state.seq.is_some()
+    {
         return Ok(());
     }
     let text = t.decode().with_context(|| "decode text")?.into_owned();
 
-    // ent_seq is the first text inside <entry>; we don't get a Start
-    // for it because we route via collecting_text on `keb`/`reb`/`pos`
-    // — so handle it explicitly when we see digits-only text at the
-    // top of an entry.
     if state.seq.is_none() {
         if let Ok(n) = text.trim().parse::<i64>() {
             state.seq = Some(n);
@@ -144,6 +148,10 @@ fn handle_text(state: &mut State, t: &BytesText<'_>) -> Result<()> {
         }
     }
 
+    if state.collecting_priority {
+        state.priority += priority_weight(text.trim());
+        return Ok(());
+    }
     if state.collecting_gloss {
         state.current_sense_glosses.push(text);
         return Ok(());
@@ -157,6 +165,28 @@ fn handle_text(state: &mut State, t: &BytesText<'_>) -> Result<()> {
         // POS body text never appears (those are entity refs); ignored.
     }
     Ok(())
+}
+
+/// Weight one ke_pri / re_pri marker.
+///
+/// JMDict's priority codes mark entries that appear in various
+/// frequency lists. "1" markers are the high-frequency band;
+/// nfXX is a 500-band ranking (nf01 = most common). We weight
+/// the "1" markers heavily and discount nfXX inversely with band.
+fn priority_weight(code: &str) -> i32 {
+    match code {
+        "news1" | "ichi1" | "spec1" | "gai1" => 100,
+        "news2" | "ichi2" | "spec2" | "gai2" => 20,
+        s if s.starts_with("nf") => {
+            // nf01..nf48; lower index = more common.
+            if let Ok(n) = s[2..].parse::<i32>() {
+                (60 - n).max(1)
+            } else {
+                1
+            }
+        }
+        _ => 0,
+    }
 }
 
 fn strip_doctype(xml: &str) -> &str {
@@ -225,5 +255,38 @@ mod tests {
         let entries = parse(SAMPLE).unwrap();
         assert_eq!(entries[1].seq, 1579110);
         assert_eq!(entries[1].senses[0].glosses, vec!["today".to_string()]);
+    }
+
+    const BOKU: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE JMdict [
+<!ENTITY pn "pronoun">
+<!ENTITY n "noun">
+]>
+<JMdict>
+  <entry>
+    <ent_seq>2222222</ent_seq>
+    <k_ele><keb>僕</keb></k_ele>
+    <r_ele><reb>しもべ</reb></r_ele>
+    <sense><pos>&n;</pos><gloss>servant</gloss></sense>
+  </entry>
+  <entry>
+    <ent_seq>1111111</ent_seq>
+    <k_ele><keb>僕</keb><ke_pri>news1</ke_pri><ke_pri>ichi1</ke_pri></k_ele>
+    <r_ele><reb>ぼく</reb><re_pri>news1</re_pri><re_pri>ichi1</re_pri><re_pri>nf02</re_pri></r_ele>
+    <sense><pos>&pn;</pos><gloss>I</gloss><gloss>me</gloss></sense>
+  </entry>
+</JMdict>
+"#;
+
+    #[test]
+    fn priority_separates_boku_from_shimobe() {
+        let entries = parse(BOKU).unwrap();
+        let shimobe = entries.iter().find(|e| e.seq == 2222222).unwrap();
+        let boku = entries.iter().find(|e| e.seq == 1111111).unwrap();
+        assert_eq!(shimobe.priority, 0, "しもべ has no priority markers");
+        // news1 + ichi1 on keb, news1 + ichi1 + nf02 on reb
+        // = 100 + 100 + 100 + 100 + (60-2) = 458
+        assert_eq!(boku.priority, 458);
+        assert!(boku.priority > shimobe.priority);
     }
 }
