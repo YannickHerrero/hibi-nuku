@@ -17,6 +17,14 @@ path = "src/main.rs"
 name = "build-jmdict"
 path = "src/bin/build_jmdict.rs"
 
+[[bin]]
+name = "wk-import"
+path = "src/bin/wk_import.rs"
+
+[[bin]]
+name = "build-wk-bundle"
+path = "src/bin/build_wk_bundle.rs"
+
 [dependencies]
 anyhow = "1"
 thiserror = "2"
