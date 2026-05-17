@@ -93,9 +93,9 @@ impl OpenRouter {
             .choices
             .first()
             .ok_or_else(|| anyhow!("no choices in OpenRouter response"))?;
-        let content = &choice.message.content;
-        let value: Value = serde_json::from_str(content)
-            .with_context(|| format!("decode model JSON: {}", truncate(content, 500)))?;
+        let stripped = strip_code_fence(&choice.message.content);
+        let value: Value = serde_json::from_str(stripped)
+            .with_context(|| format!("decode model JSON: {}", truncate(stripped, 500)))?;
         Ok(value)
     }
 }
@@ -105,5 +105,37 @@ fn truncate(s: &str, n: usize) -> String {
         format!("{}…", &s[..n])
     } else {
         s.to_string()
+    }
+}
+
+/// Some models wrap JSON in ```json ... ``` fences even with JSON
+/// mode requested. Strip them defensively.
+fn strip_code_fence(s: &str) -> &str {
+    let t = s.trim();
+    let body = t
+        .strip_prefix("```json")
+        .or_else(|| t.strip_prefix("```JSON"))
+        .or_else(|| t.strip_prefix("```"))
+        .unwrap_or(t);
+    body.strip_suffix("```").unwrap_or(body).trim()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn strips_fence_with_lang() {
+        assert_eq!(strip_code_fence("```json\n{\"a\":1}\n```"), "{\"a\":1}");
+    }
+
+    #[test]
+    fn strips_bare_fence() {
+        assert_eq!(strip_code_fence("```\n{\"a\":1}\n```"), "{\"a\":1}");
+    }
+
+    #[test]
+    fn leaves_unwrapped_alone() {
+        assert_eq!(strip_code_fence("{\"a\":1}"), "{\"a\":1}");
     }
 }
