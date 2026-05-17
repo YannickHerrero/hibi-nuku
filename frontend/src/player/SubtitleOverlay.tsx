@@ -134,34 +134,33 @@ function stylesForStatus(
     color: "var(--ink)",
     cursor: "pointer",
     padding: "0 1px",
-    // textDecoration-* lets us style underline thickness + offset cleanly.
-    textDecorationLine: "underline",
+    textDecorationLine: "none",
+    textDecorationStyle: "solid",
     textDecorationThickness: "2px",
     textUnderlineOffset: "4px",
   };
   switch (status) {
     case "known":
-      return { ...base, textDecorationColor: "var(--status-known)" };
+      // Already known → no decoration, normal ink.
+      return base;
     case "learning":
       return {
         ...base,
+        textDecorationLine: "underline",
         textDecorationColor: "var(--status-learning)",
-        textDecorationStyle: "solid",
         textDecorationThickness: "3px",
       };
     case "ignored":
-      return {
-        ...base,
-        color: "var(--ink-faint)",
-        textDecorationLine: "none",
-      };
+      // Out of mind → muted, no decoration.
+      return { ...base, color: "var(--ink-faint)" };
     default:
-      // "new": never-seen — dashed underline in muted ink-soft.
+      // "new" — solid underline in faint ink. Particles dim a touch
+      // so kanji/verb roots stand out from grammatical glue.
       return {
         ...base,
         color: token.pos === "particle" ? "var(--ink-soft)" : "var(--ink)",
+        textDecorationLine: "underline",
         textDecorationColor: "var(--ink-faint)",
-        textDecorationStyle: "dashed",
       };
   }
 }

@@ -114,20 +114,21 @@ function WatchPage() {
 
   useShortcuts({ videoEl, subtitles: subtitles ?? [], current: activeLine, setPopup: setPopupToken });
 
-  if (!video) return <p style={{ color: "var(--ink-soft)" }}>Loading…</p>;
+  if (!video) {
+    return (
+      <p
+        style={{
+          color: "var(--ink-soft)",
+          padding: "var(--s-5)",
+        }}
+      >
+        Loading…
+      </p>
+    );
+  }
 
   return (
     <div>
-      <h1
-        style={{
-          fontFamily: "var(--font-serif, serif)",
-          fontSize: "var(--t-display-md)",
-          margin: 0,
-          marginBottom: "var(--s-3)",
-        }}
-      >
-        {video.title}
-      </h1>
       <div
         style={{
           background: "#000",
@@ -218,6 +219,8 @@ function useShortcuts({
           e.preventDefault();
           jumpToLineBy(videoEl, subtitles, 1);
           break;
+        case "r":
+        case "R":
         case "z":
         case "Z":
           if (current) videoEl.currentTime = current.startMs / 1000;
