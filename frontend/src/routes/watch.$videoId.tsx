@@ -5,6 +5,7 @@ import { api } from "@/api/client";
 import { getToken } from "@/lib/token";
 import { SubtitleOverlay } from "@/player/SubtitleOverlay";
 import { Controls } from "@/player/Controls";
+import { Popup } from "@/popup/Popup";
 import type { SubtitleLine, Token } from "@/api/types";
 
 export const Route = createFileRoute("/watch/$videoId")({
@@ -136,9 +137,10 @@ function WatchPage() {
       </div>
       <Controls videoEl={videoEl} durationMs={video.durationMs} />
       {popupToken && (
-        <DebugPopupShell
+        <Popup
           token={popupToken.token}
-          rect={popupToken.rect}
+          anchor={popupToken.rect}
+          videoTitle={video.title}
           onClose={() => setPopupToken(null)}
         />
       )}
@@ -211,36 +213,3 @@ function formatTime(ms: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-function DebugPopupShell({
-  token,
-  rect,
-  onClose,
-}: {
-  token: Token;
-  rect: DOMRect;
-  onClose: () => void;
-}) {
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed",
-        top: rect.bottom + 8,
-        left: rect.left,
-        background: "var(--paper)",
-        border: "1px solid var(--ink)",
-        padding: "var(--s-3)",
-        zIndex: 5,
-        minWidth: 220,
-      }}
-    >
-      <div style={{ fontSize: "var(--t-display-sm)", fontFamily: "var(--font-serif, serif)" }}>
-        {token.lemma}
-      </div>
-      <div style={{ color: "var(--ink-soft)" }}>{token.reading}</div>
-      <div style={{ fontSize: "var(--t-meta)", color: "var(--ink-faint)" }}>
-        seq={token.dict_seq ?? "—"} · pos={token.pos}
-      </div>
-    </div>
-  );
-}
