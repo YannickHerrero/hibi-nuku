@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod dict;
 pub mod health;
 pub mod library;
 pub mod videos;
@@ -26,6 +27,7 @@ pub fn router(state: AppState) -> Router {
     let protected = Router::new()
         .merge(library::routes())
         .merge(videos::routes())
+        .merge(dict::routes())
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             auth::require_bearer,

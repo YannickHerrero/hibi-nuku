@@ -3,6 +3,7 @@
 pub mod api;
 pub mod config;
 pub mod db;
+pub mod dict;
 pub mod error;
 pub mod jmdict;
 pub mod library;

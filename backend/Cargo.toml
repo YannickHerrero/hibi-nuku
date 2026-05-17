@@ -25,6 +25,10 @@ path = "src/bin/wk_import.rs"
 name = "build-wk-bundle"
 path = "src/bin/build_wk_bundle.rs"
 
+[[bin]]
+name = "build-frequency"
+path = "src/bin/build_frequency.rs"
+
 [dependencies]
 anyhow = "1"
 thiserror = "2"
