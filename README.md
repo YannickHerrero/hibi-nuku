@@ -237,7 +237,20 @@ All routes under `/api`, all (except `/api/health`) gated by `Authorization: Bea
 
 ## Out of scope (v1)
 
-Per spec §17–18: multi-user, public hosting, in-app review UI, AnkiConnect export, pitch accent dictionary, PGS subtitle OCR, multiple frequency lists, byte-range scrubbing on the remuxed stream (seek reloads the stream from a new offset instead).
+Per spec §17–18: multi-user, public hosting, in-app review UI, AnkiConnect export, pitch accent dictionary, PGS subtitle OCR, multiple frequency lists.
+
+---
+
+## Roadmap
+
+Things deliberately deferred but worth picking up later. Most-likely-next at the top.
+
+- **Offline viewing** — download a video to the device via OPFS so you can watch start-to-finish without a connection (plane / subway / unreliable wifi). Includes a download manager (sizes, free space, delete) and `navigator.onLine`-aware mining (button disabled when offline). Phase A landed byte-range support so this only adds the storage + UI layer. Design sketch lives in commit history around `feat(media): pipeline remux step`.
+- **Offline mining queue** — record mining intents (lineId, focus word, tags) locally while offline, replay against `/api/mine` on reconnect. Builds on offline viewing.
+- **Per-line audio pre-extract on import** — currently mining triggers an ffmpeg run per card. Pre-extracting at import time makes mining instant at the cost of disk space + import time.
+- **Multi-track subtitle toggle** — many anime have JP + EN subs in the same container. Today we lock to the JP track at import; let the player toggle EN as training-wheels.
+- **Manifest icons** — the PWA installs cleanly but uses default icons. Drop in real artwork.
+- **Pitch accent dictionary** — NHK Yomitan-format dataset, popup section showing accent for the focus word.
 
 ---
 
