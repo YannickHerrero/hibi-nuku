@@ -1,16 +1,17 @@
 pub mod auth;
 pub mod health;
+pub mod library;
 
 use std::sync::Arc;
 
 use axum::Router;
+use axum::middleware;
 use sqlx::SqlitePool;
 use tower_http::trace::TraceLayer;
 
 use crate::config::Config;
 
 #[derive(Clone)]
-#[allow(dead_code)]
 pub struct AppState {
     pub config: Arc<Config>,
     pub db: SqlitePool,
@@ -19,9 +20,9 @@ pub struct AppState {
 pub fn router(state: AppState) -> Router {
     let public = Router::new().merge(health::routes());
 
-    // `protected` will be merged with .route_layer(auth::require_bearer)
-    // once Phase 2 adds the first protected route.
-    let protected: Router<AppState> = Router::new();
+    let protected = Router::new().merge(library::routes()).route_layer(
+        middleware::from_fn_with_state(state.clone(), auth::require_bearer),
+    );
 
     Router::new()
         .nest("/api", public.merge(protected))
