@@ -130,7 +130,6 @@ function WatchPage() {
       </h1>
       <div
         style={{
-          position: "relative",
           background: "#000",
           aspectRatio: "16/9",
         }}
@@ -145,12 +144,12 @@ function WatchPage() {
           controls={false}
           playsInline
         />
-        <SubtitleOverlay
-          line={activeLine}
-          known={known?.items ?? []}
-          onTokenClick={(token, rect) => setPopupToken({ token, rect })}
-        />
       </div>
+      <SubtitleOverlay
+        line={activeLine}
+        known={known?.items ?? []}
+        onTokenClick={(token, rect) => setPopupToken({ token, rect })}
+      />
       <Controls videoEl={videoEl} durationMs={video.durationMs} />
       {popupToken && (
         <Popup
