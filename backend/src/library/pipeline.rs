@@ -13,10 +13,13 @@ use anyhow::{Context, Result, anyhow};
 use sqlx::SqlitePool;
 use tracing::{error, info};
 
+use crate::config::Config;
 use crate::library::lines;
 use crate::library::model::VideoStatus;
 use crate::library::repo;
 use crate::library::tracks;
+use crate::llm::client::OpenRouter;
+use crate::llm::translate;
 use crate::subtitle;
 use crate::tokenize::jmdict_index::JmdictIndex;
 use crate::tokenize::{lindera_wrap, segment};
@@ -25,8 +28,13 @@ use crate::tokenize::{lindera_wrap, segment};
 ///
 /// Errors are caught and persisted as `status = error`; only an
 /// infrastructure failure (DB writes themselves failing) escapes.
-pub async fn run(pool: Arc<SqlitePool>, jmdict: Arc<JmdictIndex>, video_id: i64) {
-    if let Err(e) = drive(pool.clone(), jmdict, video_id).await {
+pub async fn run(
+    pool: Arc<SqlitePool>,
+    jmdict: Arc<JmdictIndex>,
+    config: Arc<Config>,
+    video_id: i64,
+) {
+    if let Err(e) = drive(pool.clone(), jmdict, config, video_id).await {
         error!(video_id, error = %e, "import pipeline failed");
         let _ = repo::set_status(&pool, video_id, VideoStatus::Error, Some(&e.to_string())).await;
     }
@@ -35,6 +43,7 @@ pub async fn run(pool: Arc<SqlitePool>, jmdict: Arc<JmdictIndex>, video_id: i64)
 async fn drive(
     pool: Arc<SqlitePool>,
     jmdict: Arc<JmdictIndex>,
+    config: Arc<Config>,
     video_id: i64,
 ) -> Result<()> {
     let video = repo::get(&pool, video_id)
@@ -97,7 +106,14 @@ async fn drive(
 
     info!(video_id, "tokenization complete");
 
-    // 4. translating — Phase 5
+    // 4. translating
+    repo::set_status(&pool, video_id, VideoStatus::Translating, None).await?;
+    let client = OpenRouter::new(config.openrouter_api_key.clone());
+    let n = translate::translate_lines(pool.clone(), &client, &config.llm_model, video_id)
+        .await
+        .context("translate lines")?;
+    info!(video_id, n_translated = n, "translation complete");
+
     repo::set_status(&pool, video_id, VideoStatus::Ready, None).await?;
     Ok(())
 }
