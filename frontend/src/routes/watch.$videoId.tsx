@@ -94,6 +94,26 @@ function WatchPage() {
     return () => videoEl.removeEventListener("timeupdate", onTimeUpdate);
   }, [videoEl, id]);
 
+  // Immersion session — start on mount, end on unmount/route change.
+  useEffect(() => {
+    if (!video) return;
+    const startedAt = new Date().toISOString();
+    const startedMs = Date.now();
+    return () => {
+      const endedAt = new Date().toISOString();
+      const durationMs = Date.now() - startedMs;
+      if (durationMs < 5_000) return; // ignore micro visits
+      void api.postSession({
+        kind: "video",
+        source: "hibi-nuku",
+        startedAt,
+        endedAt,
+        durationMs,
+        metadata: { videoId: id, title: video.title },
+      });
+    };
+  }, [video, id]);
+
   const activeLine = useMemo(() => {
     if (!subtitles) return null;
     return (
