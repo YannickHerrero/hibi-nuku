@@ -1,0 +1,43 @@
+# Rust / cargo
+/target/
+**/target/
+Cargo.lock.bak
+
+# Node / pnpm
+node_modules/
+.pnpm-debug.log
+.pnpm-store/
+
+# Build output
+frontend/dist/
+frontend/.vite/
+
+# SQLite
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Generated dict bundles
+backend/data/jmdict.json.gz
+backend/data/wk.json.gz
+backend/data/frequency.json.gz
+backend/data/unidic/
+backend/data/dev.db
+
+# Env
+.env
+backend/.env
+frontend/.env
+*.env.local
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+*.swp
+*.swo
+
+# Misc
+*.log
+tmp/
