@@ -48,11 +48,13 @@ async fn hibi_status(State(state): State<AppState>) -> AppResult<Json<HibiStatus
     let base = state.config.hibi_base.clone();
     let key = state.config.hibi_api_key.clone();
 
+    // All probes use Bearer API-key auth. /v1/account/* needs a
+    // session cookie instead, so we don't probe it here.
     let probes = vec![
         probe(&base, &key, "GET", "/v1/known-words").await,
         probe(&base, &key, "GET", "/v1/cards?limit=1").await,
-        probe(&base, &key, "GET", "/v1/account/me").await,
         probe(&base, &key, "GET", "/v1/reviews/due?limit=1").await,
+        probe(&base, &key, "GET", "/v1/stats/heatmap").await,
     ];
 
     Ok(Json(HibiStatusResp { base, probes }))
