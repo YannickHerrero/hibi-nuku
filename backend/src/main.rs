@@ -1,5 +1,6 @@
 mod api;
 mod config;
+mod db;
 mod error;
 mod logging;
 
@@ -18,8 +19,13 @@ async fn main() -> Result<()> {
 
     let cfg = Config::from_env()?;
     let addr = format!("{}:{}", cfg.host, cfg.port);
+
+    let pool = db::connect(&cfg.db_path).await?;
+    db::migrate(&pool).await?;
+
     let state = AppState {
         config: Arc::new(cfg),
+        db: pool,
     };
     let app = api::router(state);
 

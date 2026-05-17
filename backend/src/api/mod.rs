@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use axum::Router;
 use axum::middleware;
+use sqlx::SqlitePool;
 use tower_http::trace::TraceLayer;
 
 use crate::config::Config;
@@ -13,6 +14,7 @@ use crate::config::Config;
 #[allow(dead_code)]
 pub struct AppState {
     pub config: Arc<Config>,
+    pub db: SqlitePool,
 }
 
 pub fn router(state: AppState) -> Router {
