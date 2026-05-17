@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod debug;
 pub mod dict;
 pub mod health;
 pub mod hibi_proxy;
@@ -40,6 +41,7 @@ pub fn router(state: AppState) -> Router {
         .merge(mine::routes())
         .merge(hibi_proxy::routes())
         .merge(settings::routes())
+        .merge(debug::routes())
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             auth::require_bearer,
