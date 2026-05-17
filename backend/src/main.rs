@@ -5,6 +5,7 @@ mod error;
 mod library;
 mod logging;
 mod media;
+mod subtitle;
 
 use std::sync::Arc;
 
