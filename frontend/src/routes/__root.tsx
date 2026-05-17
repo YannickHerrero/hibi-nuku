@@ -1,4 +1,5 @@
 import { Outlet, Link, createRootRoute } from "@tanstack/react-router";
+import { InstallPrompt } from "@/components/InstallPrompt";
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -44,6 +45,7 @@ function RootLayout() {
       <main className="container-page" style={{ padding: "var(--s-5) 0" }}>
         <Outlet />
       </main>
+      <InstallPrompt />
     </div>
   );
 }
