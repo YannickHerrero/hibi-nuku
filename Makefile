@@ -105,6 +105,39 @@ install-dirs: ## Create + chown library + data dirs
 enable: ## systemctl enable --now nuku
 	sudo systemctl enable --now nuku
 
+# ---------------- dict bundle builds ----------------
+#
+# After each rebuild: visit /debug → Force re-hydrate (so the
+# browser picks up the freshly versioned bundle).
+#
+# `.env` is sourced so NUKU_DATA_DIR resolves regardless of the
+# user's shell environment.
+
+.PHONY: build-jmdict
+build-jmdict: ## Rebuild JMDict bundle from data-sources/JMdict_e
+	set -a; . $(REPO)/.env; set +a; \
+	cargo run --manifest-path $(REPO)/backend/Cargo.toml --release --bin build-jmdict -- \
+		--input $(REPO)/data-sources/JMdict_e \
+		--output "$$NUKU_DATA_DIR/jmdict.json.gz"
+
+.PHONY: build-wk-bundle
+build-wk-bundle: ## Rebuild WK bundle from the cached tables
+	set -a; . $(REPO)/.env; set +a; \
+	cargo run --manifest-path $(REPO)/backend/Cargo.toml --release --bin build-wk-bundle -- \
+		--output "$$NUKU_DATA_DIR/wk.json.gz"
+
+.PHONY: build-frequency
+build-frequency: ## Rebuild JPDB frequency bundle
+	set -a; . $(REPO)/.env; set +a; \
+	cargo run --manifest-path $(REPO)/backend/Cargo.toml --release --bin build-frequency -- \
+		--input $(REPO)/data-sources/jpdb_v2.2_frequency \
+		--output "$$NUKU_DATA_DIR/frequency.json.gz"
+
+.PHONY: import-wk
+import-wk: ## Refresh WK cache from the API (then re-build the bundle)
+	set -a; . $(REPO)/.env; set +a; \
+	cargo run --manifest-path $(REPO)/backend/Cargo.toml --release --bin wk-import
+
 # ---------------- destructive: full uninstall ----------------
 
 .PHONY: uninstall
