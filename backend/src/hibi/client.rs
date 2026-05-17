@@ -71,7 +71,7 @@ impl Hibi {
             .send()
             .await
             .with_context(|| format!("upload {url}"))?;
-        Self::decode(resp).await
+        Self::decode(resp, "POST", path).await
     }
 
     async fn get<T: DeserializeOwned>(&self, path: &str) -> Result<T> {
@@ -83,7 +83,7 @@ impl Hibi {
             .send()
             .await
             .with_context(|| format!("GET {url}"))?;
-        Self::decode(resp).await
+        Self::decode(resp, "GET", path).await
     }
 
     async fn post_json<T: DeserializeOwned, B: Serialize>(&self, path: &str, body: &B) -> Result<T> {
@@ -96,7 +96,7 @@ impl Hibi {
             .send()
             .await
             .with_context(|| format!("POST {url}"))?;
-        Self::decode(resp).await
+        Self::decode(resp, "POST", path).await
     }
 
     async fn put_json<T: DeserializeOwned, B: Serialize>(&self, path: &str, body: &B) -> Result<T> {
@@ -109,14 +109,22 @@ impl Hibi {
             .send()
             .await
             .with_context(|| format!("PUT {url}"))?;
-        Self::decode(resp).await
+        Self::decode(resp, "PUT", path).await
     }
 
-    async fn decode<T: DeserializeOwned>(resp: reqwest::Response) -> Result<T> {
+    async fn decode<T: DeserializeOwned>(
+        resp: reqwest::Response,
+        method: &str,
+        path: &str,
+    ) -> Result<T> {
         let status = resp.status();
         let text = resp.text().await.context("body")?;
         if !status.is_success() {
-            return Err(anyhow!("hibi {}: {}", status, truncate(&text, 500)));
+            return Err(anyhow!(
+                "hibi {method} {path} -> {}: {}",
+                status,
+                truncate(&text, 500)
+            ));
         }
         serde_json::from_str(&text).with_context(|| format!("decode: {}", truncate(&text, 500)))
     }
