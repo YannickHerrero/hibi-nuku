@@ -43,6 +43,10 @@ export const api = {
   progress: (id: number) => http.get<ProgressResp>(`/api/videos/${id}/progress`),
   postProgress: (id: number, body: { position_ms: number; device?: string }) =>
     http.post<ProgressResp>(`/api/videos/${id}/progress`, body),
+  // Stream URL — browser handles seek natively via HTTP Range when
+  // the backend has a pre-remuxed file. The legacy `?from=<sec>`
+  // reload-on-seek param is still accepted as a fallback for videos
+  // imported before the remux pipeline step shipped.
   streamUrl: (id: number, fromSec?: number) =>
     withToken(`/api/videos/${id}/stream${fromSec ? `?from=${fromSec}` : ""}`),
   thumbnailUrl: (id: number) => withToken(`/api/videos/${id}/thumbnail`),

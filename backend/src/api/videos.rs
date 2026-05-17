@@ -9,7 +9,7 @@ use axum::Router;
 use axum::body::Body;
 use axum::extract::{Path, Query, State};
 use axum::http::{HeaderValue, StatusCode, header};
-use axum::response::Response;
+use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -43,6 +43,7 @@ async fn stream(
     State(state): State<AppState>,
     Path(id): Path<i64>,
     Query(q): Query<StreamQuery>,
+    req: axum::extract::Request,
 ) -> AppResult<Response> {
     let video = repo::get(&state.db, id)
         .await
@@ -57,8 +58,29 @@ async fn stream(
         )));
     }
 
+    // Fast path: serve the pre-remuxed faststart MP4 via tower-http
+    // ServeFile, which handles HTTP Range natively. The browser does
+    // its own seek + prefetch, no ffmpeg in the request path.
+    let remuxed = repo::get_remuxed_path(&state.db, id)
+        .await
+        .map_err(AppError::Other)?;
+    if let Some(r) = remuxed {
+        let r_path = std::path::PathBuf::from(&r);
+        if r_path.exists() {
+            use tower::ServiceExt;
+            use tower_http::services::ServeFile;
+            let resp = ServeFile::new(&r_path)
+                .oneshot(req)
+                .await
+                .map_err(|e| AppError::Other(anyhow::anyhow!("serve {r}: {e}")))?;
+            return Ok(resp.into_response());
+        }
+    }
+
+    // Slow path: no remuxed file yet (pre-Phase-A imports, or remux
+    // failed). Fall back to the live ffmpeg pipe with the existing
+    // `?from=<sec>` reload-on-seek behaviour.
     let audio_idx = video.jp_audio_idx;
-    // Heuristic: use ffprobe codec name from the jp track if known.
     let plan = pick_plan(&path, audio_idx).await;
 
     let mut s = mstream::spawn(&path, audio_idx, plan, q.from).map_err(AppError::Other)?;
