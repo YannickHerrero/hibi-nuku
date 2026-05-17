@@ -10,11 +10,13 @@ use sqlx::SqlitePool;
 use tower_http::trace::TraceLayer;
 
 use crate::config::Config;
+use crate::tokenize::jmdict_index::JmdictIndex;
 
 #[derive(Clone)]
 pub struct AppState {
     pub config: Arc<Config>,
     pub db: SqlitePool,
+    pub jmdict: Arc<JmdictIndex>,
 }
 
 pub fn router(state: AppState) -> Router {

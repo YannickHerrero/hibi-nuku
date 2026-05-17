@@ -18,19 +18,25 @@ use crate::library::model::VideoStatus;
 use crate::library::repo;
 use crate::library::tracks;
 use crate::subtitle;
+use crate::tokenize::jmdict_index::JmdictIndex;
+use crate::tokenize::{lindera_wrap, segment};
 
 /// Run the import pipeline for an already-persisted video row.
 ///
 /// Errors are caught and persisted as `status = error`; only an
 /// infrastructure failure (DB writes themselves failing) escapes.
-pub async fn run(pool: Arc<SqlitePool>, video_id: i64) {
-    if let Err(e) = drive(pool.clone(), video_id).await {
+pub async fn run(pool: Arc<SqlitePool>, jmdict: Arc<JmdictIndex>, video_id: i64) {
+    if let Err(e) = drive(pool.clone(), jmdict, video_id).await {
         error!(video_id, error = %e, "import pipeline failed");
         let _ = repo::set_status(&pool, video_id, VideoStatus::Error, Some(&e.to_string())).await;
     }
 }
 
-async fn drive(pool: Arc<SqlitePool>, video_id: i64) -> Result<()> {
+async fn drive(
+    pool: Arc<SqlitePool>,
+    jmdict: Arc<JmdictIndex>,
+    video_id: i64,
+) -> Result<()> {
     let video = repo::get(&pool, video_id)
         .await?
         .ok_or_else(|| anyhow!("video {video_id} vanished"))?;
@@ -71,9 +77,27 @@ async fn drive(pool: Arc<SqlitePool>, video_id: i64) -> Result<()> {
         "subtitle parse complete"
     );
 
-    // 3. tokenizing — Phase 4
+    // 3. tokenizing
+    repo::set_status(&pool, video_id, VideoStatus::Tokenizing, None).await?;
+    let persisted = lines::list_for_video(&pool, video_id)
+        .await
+        .context("re-read persisted lines")?;
+    for line in &persisted {
+        let lindera = match lindera_wrap::tokenize(&line.raw_text) {
+            Ok(v) => v,
+            Err(e) => {
+                error!(line_id = line.id, error = %e, "lindera failed; skipping line");
+                continue;
+            }
+        };
+        let tokens = segment::segment(&line.raw_text, &lindera, jmdict.as_ref());
+        let json = serde_json::to_string(&tokens).context("serialise tokens")?;
+        lines::set_tokens(&pool, line.id, &json).await?;
+    }
+
+    info!(video_id, "tokenization complete");
+
     // 4. translating — Phase 5
-    // Until those land, jump straight to ready.
     repo::set_status(&pool, video_id, VideoStatus::Ready, None).await?;
     Ok(())
 }

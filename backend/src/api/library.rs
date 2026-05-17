@@ -111,7 +111,7 @@ async fn import(
         })?;
 
     let pool = Arc::new(state.db.clone());
-    tokio::spawn(pipeline::run(pool, id));
+    tokio::spawn(pipeline::run(pool, state.jmdict.clone(), id));
 
     Ok(Json(ImportResp {
         video_id: id,
@@ -205,7 +205,7 @@ async fn reprocess(
         .await
         .map_err(AppError::Other)?;
     let pool = Arc::new(state.db.clone());
-    tokio::spawn(pipeline::run(pool, video.id));
+    tokio::spawn(pipeline::run(pool, state.jmdict.clone(), video.id));
     Ok(Json(ReprocessResp {
         video_id: video.id,
         status: VideoStatus::Probing,

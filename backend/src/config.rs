@@ -3,6 +3,12 @@ use std::str::FromStr;
 
 use anyhow::{Context, Result, bail};
 
+/// Where built dict bundles live (relative to CWD when developing, an
+/// absolute path in prod). Configurable via `NUKU_DATA_DIR`.
+pub fn data_dir() -> PathBuf {
+    PathBuf::from(std::env::var("NUKU_DATA_DIR").unwrap_or_else(|_| "backend/data".into()))
+}
+
 /// All runtime configuration is materialised once on startup.
 ///
 /// Required values fail-fast with a descriptive error so a misconfigured
@@ -14,6 +20,7 @@ pub struct Config {
     pub port: u16,
     pub db_path: PathBuf,
     pub library_dir: PathBuf,
+    pub data_dir: PathBuf,
     pub token: String,
     pub hibi_base: String,
     pub hibi_api_key: String,
@@ -29,6 +36,7 @@ impl Config {
             port: env_parse("NUKU_PORT", 8787)?,
             db_path: env_path("NUKU_DB_PATH", "backend/data/dev.db"),
             library_dir: env_path("NUKU_LIBRARY_DIR", "/srv/hibi-nuku/library"),
+            data_dir: data_dir(),
             token: require_env("NUKU_TOKEN")?,
             hibi_base: env_or("HIBI_API_BASE", "https://hibi-api.vercel.app"),
             hibi_api_key: require_env("HIBI_API_KEY")?,
