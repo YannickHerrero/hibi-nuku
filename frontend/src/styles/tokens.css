@@ -1,0 +1,117 @@
+/* Hibi Nuku tokens — adapted from the Hibi design system.
+   Themes switch via `html[data-theme=...]`. */
+
+:root {
+  /* Active theme — set in main.tsx based on localStorage. */
+  --paper: #f4ebd9;
+  --paper-alt: #efe3ce;
+  --ink: #2b241b;
+  --ink-soft: #6b5e4e;
+  --ink-faint: #a49580;
+  --rule-soft: rgba(43, 36, 27, 0.15);
+  --accent: #b5593a;
+  --accent-soft: #d89478;
+  --muted: #e5d8c0;
+
+  /* Type scale */
+  --t-display-xl: 72px;
+  --t-display-lg: 44px;
+  --t-display-md: 32px;
+  --t-display-sm: 24px;
+  --t-body: 17px;
+  --t-body-sm: 15px;
+  --t-meta: 13px;
+  --t-mono-md: 13px;
+  --t-mono-sm: 11px;
+
+  /* Spacing — 4px base */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 22px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+
+  --r-0: 0px;
+  --r-sm: 2px;
+  --r-md: 8px;
+  --r-pill: 999px;
+
+  --track-tight: -0.03em;
+  --track-body: -0.01em;
+  --track-mono: 0.18em;
+
+  --gutter: 22px;
+  --max: 1100px;
+}
+
+html[data-theme="paper"] {
+  --paper: #f4ebd9;
+  --paper-alt: #efe3ce;
+  --ink: #2b241b;
+  --ink-soft: #6b5e4e;
+  --ink-faint: #a49580;
+  --rule-soft: rgba(43, 36, 27, 0.15);
+  --accent: #b5593a;
+  --accent-soft: #d89478;
+  --muted: #e5d8c0;
+}
+
+html[data-theme="stone"] {
+  --paper: #e6e8ea;
+  --paper-alt: #dde0e3;
+  --ink: #2d3338;
+  --ink-soft: #5f6972;
+  --ink-faint: #9ba3ab;
+  --rule-soft: rgba(45, 51, 56, 0.15);
+  --accent: #4a6b8a;
+  --accent-soft: #89a0b8;
+  --muted: #d3d7db;
+}
+
+html[data-theme="sage"] {
+  --paper: #dde4d2;
+  --paper-alt: #d3dbc6;
+  --ink: #2c3526;
+  --ink-soft: #5e6954;
+  --ink-faint: #97a287;
+  --rule-soft: rgba(44, 53, 38, 0.15);
+  --accent: #3f5c32;
+  --accent-soft: #7b9669;
+  --muted: #ccd4be;
+}
+
+html[data-theme="clay"] {
+  --paper: #e8d4c2;
+  --paper-alt: #dfc7b1;
+  --ink: #3a2820;
+  --ink-soft: #6e5548;
+  --ink-faint: #a8907f;
+  --rule-soft: rgba(58, 40, 32, 0.15);
+  --accent: #9e4521;
+  --accent-soft: #c27a56;
+  --muted: #d9c0a8;
+}
+
+html[data-theme="ink"] {
+  --paper: #000;
+  --paper-alt: #0a0a0a;
+  --ink: #e4e1d8;
+  --ink-soft: #9a9690;
+  --ink-faint: #5a5752;
+  --rule-soft: rgba(228, 225, 216, 0.18);
+  --accent: #f5efe0;
+  --accent-soft: #c9c4b8;
+  --muted: #151515;
+}
+
+/* Word-status colours layered on top of the active theme. Used by the
+   player to colour-code subtitle tokens. */
+:root {
+  --status-known: var(--accent-soft);
+  --status-learning: #ffc857;
+  --status-new: var(--ink-soft);
+  --status-ignored: var(--ink-faint);
+}
